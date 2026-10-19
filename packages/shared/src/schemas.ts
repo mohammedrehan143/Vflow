@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
 export const UserRegisterSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  phone: z.string().min(10, 'Phone must be at least 10 digits'),
+  phone: z.string().min(10, 'Mobile number must be at least 10 digits'),
   role: z.enum(['customer', 'provider', 'admin']).default('customer')
 });
 
 export const UserLoginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
+  email: z.string().min(3, 'Email or mobile number is required'),
   password: z.string().min(1, 'Password is required')
 });
 

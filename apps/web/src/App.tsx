@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { InstallPromptPopup } from './components/common/InstallPromptPopup';
+import { BottomNavbar } from './components/common/BottomNavbar';
 
 // Pages
 import { Home } from './pages/Home';
@@ -34,7 +35,7 @@ import {
 
 export const App: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
+    <div className="flex flex-col min-h-screen bg-black text-white selection:bg-yellow-400 selection:text-black pb-16">
       <Navbar />
 
       <main className="flex-1">
@@ -103,6 +104,7 @@ export const App: React.FC = () => {
 
       <Footer />
       <InstallPromptPopup />
+      <BottomNavbar />
     </div>
   );
 };

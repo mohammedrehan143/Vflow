@@ -11,15 +11,32 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export class AuthService {
   static async register(data: {
-    email: string;
+    email?: string;
     password: string;
     fullName: string;
     phone?: string;
     role?: UserRole;
   }) {
-    const existing = await UserModel.findOne({ email: data.email.toLowerCase() });
+    const phoneClean = data.phone ? data.phone.trim() : '';
+    const emailToUse = (data.email && data.email.trim().length > 0)
+      ? data.email.toLowerCase().trim()
+      : phoneClean
+      ? `${phoneClean.replace(/\D/g, '')}@vflow.user`
+      : '';
+
+    if (!emailToUse) {
+      throw new Error('Please provide either an email or a mobile number');
+    }
+
+    const existing = await UserModel.findOne({
+      $or: [
+        { email: emailToUse },
+        ...(phoneClean ? [{ phone: phoneClean }] : []),
+        ...(phoneClean ? [{ phone: phoneClean.replace(/\D/g, '') }] : [])
+      ]
+    });
     if (existing) {
-      throw new Error('A user with this email address already exists');
+      throw new Error('An account with this email address or mobile number already exists');
     }
 
     let supabaseId: string | undefined;
@@ -27,7 +44,7 @@ export class AuthService {
     if (supabase) {
       try {
         const { data: supaUser, error } = await supabase.auth.signUp({
-          email: data.email.toLowerCase(),
+          email: emailToUse,
           password: data.password,
           options: {
             data: {
@@ -49,10 +66,10 @@ export class AuthService {
 
     const user = await UserModel.create({
       supabaseId,
-      email: data.email.toLowerCase(),
+      email: emailToUse,
       passwordHash,
       fullName: data.fullName,
-      phone: data.phone,
+      phone: phoneClean,
       role: data.role || 'customer',
       emailVerified: false,
     });
@@ -73,15 +90,25 @@ export class AuthService {
     };
   }
 
-  static async login(email: string, password: string) {
-    let user = await UserModel.findOne({ email: email.toLowerCase() });
+  static async login(identifier: string, password: string) {
+    const clean = (identifier || '').trim();
+    const cleanDigits = clean.replace(/\D/g, '');
+    let user = await UserModel.findOne({
+      $or: [
+        { email: clean.toLowerCase() },
+        { phone: clean },
+        ...(cleanDigits ? [{ phone: cleanDigits }] : []),
+        ...(cleanDigits ? [{ email: `${cleanDigits}@vflow.user` }] : [])
+      ]
+    });
 
     // Optional Supabase Auth validation
     const supabase = getSupabaseClient();
     if (supabase) {
       try {
+        const supaEmail = user?.email || (clean.includes('@') ? clean.toLowerCase() : `${cleanDigits}@vflow.user`);
         const { data: supaAuth, error } = await supabase.auth.signInWithPassword({
-          email: email.toLowerCase(),
+          email: supaEmail,
           password,
         });
 
@@ -89,7 +116,7 @@ export class AuthService {
           if (!user) {
             user = await UserModel.create({
               supabaseId: supaAuth.user.id,
-              email: supaAuth.user.email || email.toLowerCase(),
+              email: supaAuth.user.email || supaEmail,
               fullName: supaAuth.user.user_metadata?.full_name || 'VFlow Driver',
               role: 'customer',
               emailVerified: true,

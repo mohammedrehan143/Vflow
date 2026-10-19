@@ -29,6 +29,7 @@ export const AuthPage: React.FC = () => {
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
 
   // Form states
+  const [identifier, setIdentifier] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,44 +69,47 @@ export const AuthPage: React.FC = () => {
         setErrorMessage('Password must be at least 6 characters long.');
         return;
       }
+      if (!phone || phone.replace(/\D/g, '').length < 10) {
+        setErrorMessage('Please enter a valid 10-digit mobile number.');
+        return;
+      }
     }
 
     setIsLoading(true);
 
     try {
       if (mode === 'login') {
-        await login(email, password, rememberSession);
+        await login(identifier || email, password, rememberSession);
         navigate('/');
       } else {
         await register({
-          email,
-          password,
           fullName,
           phone,
-          role: 'customer', // default initially until role selection
+          email: email.trim() || undefined,
+          password,
+          role: 'customer',
         });
-        setVerificationNotice('A verification link has been sent to your email address.');
         setShowRoleSelection(true);
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Authentication failed. Please check your credentials.');
+      setErrorMessage(err.message || 'Authentication failed. Please verify your credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleRoleConfirm = async (chosenRole: 'customer' | 'provider') => {
+  const handleRoleConfirm = async () => {
     setIsLoading(true);
     try {
-      await selectRole(chosenRole);
+      await selectRole(registeredRole);
       setShowRoleSelection(false);
-      if (chosenRole === 'provider') {
+      if (registeredRole === 'provider') {
         navigate('/provider/dashboard');
       } else {
-        navigate('/parking');
+        navigate('/');
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Role selection failed');
+      alert(err.message || 'Failed to select role');
     } finally {
       setIsLoading(false);
     }
@@ -114,22 +118,15 @@ export const AuthPage: React.FC = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setForgotMessage(null);
     try {
       const res = await api.auth.forgotPassword(forgotEmail);
       setForgotSubmitted(true);
-      setForgotMessage(res.message || 'Password reset link sent to your email.');
+      setForgotMessage(res.message || 'Password reset instructions sent.');
     } catch (err: any) {
-      setForgotMessage(err.message || 'Failed to send password reset link');
+      setForgotMessage(err.message || 'Failed to send password reset request');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleGoogleSignIn = () => {
-    // Supabase Google Auth redirect or simulation
-    quickDemoLogin('customer');
-    navigate('/parking');
   };
 
   const handleDemoSelect = async (demoRole: 'customer' | 'provider' | 'admin') => {
@@ -142,7 +139,7 @@ export const AuthPage: React.FC = () => {
       } else if (demoRole === 'admin') {
         navigate('/admin');
       } else {
-        navigate('/parking');
+        navigate('/');
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Demo login failed');
@@ -152,51 +149,48 @@ export const AuthPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-12 space-y-6">
+    <div className="min-h-screen bg-black text-white px-4 py-12 flex flex-col justify-center max-w-md mx-auto space-y-6">
       {/* Brand logo */}
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center mx-auto shadow-md">
-          <Zap className="w-6 h-6 fill-white" />
+        <div className="w-12 h-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center mx-auto shadow-lg shadow-yellow-400/20">
+          <Zap className="w-6 h-6 fill-black" />
         </div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-black text-white tracking-tight">
           {mode === 'login' ? 'Welcome Back to VFlow' : 'Create Your VFlow Account'}
         </h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-neutral-400">
           Seamless parking reservations and EV fast charging across India
         </p>
       </div>
 
       {/* Instant Demo Sign-In Box */}
-      <div className="bg-emerald-50/70 rounded-2xl border border-emerald-200/80 p-4 space-y-2.5">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 uppercase tracking-wider">
-          <ShieldCheck className="w-4 h-4 text-emerald-700" />
-          <span>Instant Evaluator Demo Login</span>
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 space-y-2.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-yellow-400 uppercase tracking-wider">
+          <ShieldCheck className="w-4 h-4 text-yellow-400" />
+          <span>Quick 1-Click Role Login</span>
         </div>
-        <p className="text-[11px] text-emerald-800 leading-relaxed">
-          Click any role below to sign in immediately with pre-configured verified accounts:
+        <p className="text-[11px] text-neutral-300 leading-relaxed">
+          Test the platform instantaneously with pre-configured accounts:
         </p>
         <div className="grid grid-cols-3 gap-2 pt-1">
           <button
             type="button"
             onClick={() => handleDemoSelect('customer')}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white hover:bg-emerald-100 text-slate-900 text-xs font-bold border border-emerald-200 shadow-sm transition text-center"
+            className="py-1.5 px-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-neutral-200 text-xs font-bold transition border border-neutral-800 hover:border-yellow-400"
           >
             🚗 Driver
           </button>
           <button
             type="button"
             onClick={() => handleDemoSelect('provider')}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white hover:bg-emerald-100 text-slate-900 text-xs font-bold border border-emerald-200 shadow-sm transition text-center"
+            className="py-1.5 px-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-neutral-200 text-xs font-bold transition border border-neutral-800 hover:border-yellow-400"
           >
-            🅿️ Host
+            ⚡ Host
           </button>
           <button
             type="button"
             onClick={() => handleDemoSelect('admin')}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-white hover:bg-emerald-100 text-slate-900 text-xs font-bold border border-emerald-200 shadow-sm transition text-center"
+            className="py-1.5 px-2 rounded-xl bg-neutral-950 hover:bg-neutral-800 text-neutral-200 text-xs font-bold transition border border-neutral-800 hover:border-yellow-400"
           >
             🛡️ Admin
           </button>
@@ -204,17 +198,17 @@ export const AuthPage: React.FC = () => {
       </div>
 
       {/* Main Authentication Card */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 space-y-5">
+      <div className="bg-neutral-900 rounded-3xl border border-neutral-800 shadow-2xl p-6 sm:p-8 space-y-5">
         {/* Tab switch */}
-        <div className="flex p-1 bg-slate-100 rounded-xl">
+        <div className="grid grid-cols-2 p-1 bg-black rounded-xl border border-neutral-800">
           <button
             type="button"
             onClick={() => {
               setMode('login');
               setErrorMessage(null);
             }}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${
-              mode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            className={`py-2 rounded-lg text-xs font-black transition ${
+              mode === 'login' ? 'bg-yellow-400 text-black shadow-md' : 'text-neutral-400 hover:text-white'
             }`}
           >
             Sign In
@@ -225,138 +219,123 @@ export const AuthPage: React.FC = () => {
               setMode('register');
               setErrorMessage(null);
             }}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold transition ${
-              mode === 'register' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            className={`py-2 rounded-lg text-xs font-black transition ${
+              mode === 'register' ? 'bg-yellow-400 text-black shadow-md' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            Register
+            Sign Up
           </button>
         </div>
 
-        {/* Google Sign In Button */}
-        <button
-          type="button"
-          onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl border border-slate-300 hover:bg-slate-50 transition text-xs font-bold text-slate-700 shadow-sm"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-            />
-          </svg>
-          <span>Continue with Google</span>
-        </button>
-
-        <div className="relative flex py-1 items-center">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink mx-3 text-[11px] font-semibold text-slate-400 uppercase">Or with email</span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
-
         {errorMessage && (
-          <div className="p-3 bg-red-50 text-red-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-xl text-red-300 text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {verificationNotice && (
-          <div className="p-3 bg-emerald-50 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <div className="p-3 bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-yellow-400" />
             <span>{verificationNotice}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          {mode === 'register' && (
+          {mode === 'register' ? (
             <>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Full Name</label>
+                <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-1">Full Name</label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <User className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
                   <input
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Aditya Verma"
-                    className="w-full text-xs p-3 pl-9 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full text-xs p-3 pl-9 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
                     required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Phone Number</label>
+                <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-1">Mobile Number</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                  <Phone className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
                   <input
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="9876543210"
-                    className="w-full text-xs p-3 pl-9 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="10-digit mobile number (e.g. 9876543210)"
+                    className="w-full text-xs p-3 pl-9 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
                     required
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-1">
+                  Email Address <span className="text-neutral-500 font-normal">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Optional email address"
+                    className="w-full text-xs p-3 pl-9 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
+                  />
+                </div>
+              </div>
             </>
+          ) : (
+            <div>
+              <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-1">
+                Mobile Number or Email
+              </label>
+              <div className="relative">
+                <Phone className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
+                <input
+                  type="text"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="Enter your mobile number or email"
+                  className="w-full text-xs p-3 pl-9 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
+                  required
+                />
+              </div>
+            </div>
           )}
 
           <div>
-            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Email Address</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full text-xs p-3 pl-9 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-[11px] font-bold text-slate-700 uppercase">Password</label>
+              <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider">Password</label>
               {mode === 'login' && (
                 <button
                   type="button"
                   onClick={() => setShowForgotModal(true)}
-                  className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700"
+                  className="text-[11px] font-bold text-yellow-400 hover:underline"
                 >
                   Forgot Password?
                 </button>
               )}
             </div>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+              <Lock className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full text-xs p-3 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full text-xs p-3 pl-9 pr-10 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-3 text-neutral-400 hover:text-white"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -365,21 +344,21 @@ export const AuthPage: React.FC = () => {
 
           {mode === 'register' && (
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Confirm Password</label>
+              <label className="block text-[11px] font-bold text-neutral-300 uppercase tracking-wider mb-1">Confirm Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3.5" />
+                <Lock className="w-4 h-4 text-neutral-500 absolute left-3 top-3.5" />
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full text-xs p-3 pl-9 pr-10 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-xs p-3 pl-9 pr-10 rounded-xl bg-black border border-neutral-700 text-white font-semibold focus:outline-none focus:border-yellow-400"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  className="absolute right-3 top-3 text-neutral-400 hover:text-white"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -387,27 +366,25 @@ export const AuthPage: React.FC = () => {
             </div>
           )}
 
-          {mode === 'login' && (
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="remember"
-                checked={rememberSession}
-                onChange={(e) => setRememberSession(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <label htmlFor="remember" className="text-xs text-slate-600 select-none">
-                Remember session on this device
-              </label>
-            </div>
-          )}
+          <div className="flex items-center gap-2 pt-1">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={rememberSession}
+              onChange={(e) => setRememberSession(e.target.checked)}
+              className="w-4 h-4 accent-yellow-400 rounded bg-black border-neutral-700"
+            />
+            <label htmlFor="remember" className="text-xs text-neutral-300 select-none cursor-pointer">
+              Always remember my sign up on this device
+            </label>
+          </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition text-xs sm:text-sm flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black font-black py-3.5 px-4 rounded-xl shadow-lg shadow-yellow-400/20 transition active:scale-95 text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 mt-2"
           >
-            {isLoading ? 'Processing...' : mode === 'login' ? 'Sign In to Account' : 'Create Account'}
+            {isLoading ? 'Processing...' : mode === 'login' ? 'Sign In to Account' : 'Create Account & Start'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -415,15 +392,15 @@ export const AuthPage: React.FC = () => {
 
       {/* Post-Registration Role Selection Modal */}
       {showRoleSelection && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl text-white">
             <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto">
+              <div className="w-12 h-12 bg-yellow-400 text-black rounded-2xl flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-slate-900">Choose Your VFlow Profile</h2>
-              <p className="text-xs text-slate-500">
-                You can switch between customer and provider services anytime in your account settings.
+              <h2 className="text-xl font-black text-white">Choose Your VFlow Profile</h2>
+              <p className="text-xs text-neutral-400">
+                You can switch between customer and host services anytime in your account settings.
               </p>
             </div>
 
@@ -432,17 +409,17 @@ export const AuthPage: React.FC = () => {
                 onClick={() => setRegisteredRole('customer')}
                 className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start gap-3.5 ${
                   registeredRole === 'customer'
-                    ? 'border-emerald-600 bg-emerald-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-yellow-400 bg-neutral-950'
+                    : 'border-neutral-800 hover:border-neutral-700'
                 }`}
               >
-                <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl mt-0.5">
+                <div className="p-2.5 bg-yellow-400 text-black rounded-xl mt-0.5 font-bold">
                   <Car className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900">Customer / Driver</div>
-                  <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                    Search and reserve guaranteed parking spaces and EV fast-charging ports with instant Razorpay payments.
+                  <div className="text-sm font-bold text-white">Customer / Driver</div>
+                  <div className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                    Search and reserve parking spaces and EV fast-charging ports with instant Razorpay checkout.
                   </div>
                 </div>
               </div>
@@ -451,30 +428,28 @@ export const AuthPage: React.FC = () => {
                 onClick={() => setRegisteredRole('provider')}
                 className={`p-4 rounded-2xl border-2 cursor-pointer transition flex items-start gap-3.5 ${
                   registeredRole === 'provider'
-                    ? 'border-emerald-600 bg-emerald-50/50'
-                    : 'border-slate-200 hover:border-slate-300'
+                    ? 'border-yellow-400 bg-neutral-950'
+                    : 'border-neutral-800 hover:border-neutral-700'
                 }`}
               >
-                <div className="p-2.5 bg-teal-100 text-teal-700 rounded-xl mt-0.5">
+                <div className="p-2.5 bg-yellow-400 text-black rounded-xl mt-0.5 font-bold">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-slate-900">Parking & Charging Provider</div>
-                  <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                    Monetize driveway, garage, or commercial bays and EV stations with automated next-day bank payouts.
+                  <div className="text-sm font-bold text-white">Parking / Charging Host</div>
+                  <div className="text-xs text-neutral-400 mt-0.5 leading-relaxed">
+                    List bays and EV wallbox ports, monitor earnings, and receive automated next-day bank transfers.
                   </div>
                 </div>
               </div>
             </div>
 
             <button
-              type="button"
-              onClick={() => handleRoleConfirm(registeredRole)}
+              onClick={handleRoleConfirm}
               disabled={isLoading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-600/30 transition text-xs sm:text-sm flex items-center justify-center gap-2"
+              className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-3.5 rounded-xl shadow-lg shadow-yellow-400/20 text-xs uppercase tracking-wider transition active:scale-95"
             >
-              {isLoading ? 'Setting Up...' : 'Continue to Dashboard'}
-              <ArrowRight className="w-4 h-4" />
+              Confirm Profile & Continue
             </button>
           </div>
         </div>
@@ -482,69 +457,59 @@ export const AuthPage: React.FC = () => {
 
       {/* Forgot Password Modal */}
       {showForgotModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative text-white">
             <button
               onClick={() => {
                 setShowForgotModal(false);
                 setForgotSubmitted(false);
                 setForgotMessage(null);
               }}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600"
+              className="absolute top-4 right-4 text-neutral-400 hover:text-white"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="space-y-1">
-              <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center mb-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-400/10 text-yellow-400 border border-yellow-400/30 flex items-center justify-center">
                 <KeyRound className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-bold text-slate-900">Reset Password</h3>
-              <p className="text-xs text-slate-500">
-                Enter your registered email address and we'll send you instructions to reset your password.
-              </p>
+              <div>
+                <h3 className="font-black text-white text-base">Reset Password</h3>
+                <p className="text-xs text-neutral-400">Receive password reset instructions</p>
+              </div>
             </div>
 
             {forgotMessage && (
               <div
-                className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
-                  forgotSubmitted ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'
+                className={`p-3 rounded-xl text-xs font-semibold ${
+                  forgotSubmitted
+                    ? 'bg-yellow-400/10 border border-yellow-400/30 text-yellow-400'
+                    : 'bg-red-950/40 border border-red-800/60 text-red-300'
                 }`}
               >
-                {forgotSubmitted ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-                <span>{forgotMessage}</span>
+                {forgotMessage}
               </div>
             )}
 
-            {!forgotSubmitted ? (
-              <form onSubmit={handleForgotPassword} className="space-y-3 pt-1">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Email Address</label>
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    required
-                  />
-                </div>
+            {!forgotSubmitted && (
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <input
+                  type="text"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="Enter your mobile or email"
+                  className="w-full text-xs p-3 rounded-xl bg-black border border-neutral-700 text-white focus:outline-none focus:border-yellow-400"
+                />
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition text-xs flex items-center justify-center gap-2"
+                  className="w-full bg-yellow-400 hover:bg-yellow-300 text-black font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition"
                 >
-                  {isLoading ? 'Sending...' : 'Send Password Reset Link'}
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
                 </button>
               </form>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl transition text-xs"
-              >
-                Close
-              </button>
             )}
           </div>
         </div>

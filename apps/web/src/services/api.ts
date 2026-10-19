@@ -94,6 +94,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    create: (data: any) =>
+      fetchJson<{ success: boolean; vehicle: IVehicle }>('/vehicles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     update: (id: string, data: any) =>
       fetchJson<{ success: boolean; vehicle: IVehicle }>(`/vehicles/${id}`, {
         method: 'PUT',

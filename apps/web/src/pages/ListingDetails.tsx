@@ -44,8 +44,46 @@ export const ListingDetails: React.FC = () => {
   const [licensePlate, setLicensePlate] = useState(user?.phone ? 'KA-01-MJ-4050' : 'KA-01-AB-1234');
   const [vehicleModel, setVehicleModel] = useState('Tata Nexon EV');
   const [vehicleType, setVehicleType] = useState<string>('ev');
+  const [savedVehicles, setSavedVehicles] = useState<any[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>('manual');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingError, setBookingError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    async function loadUserVehicles() {
+      if (user) {
+        try {
+          const res = await api.vehicles.list();
+          if (res.success && res.vehicles && res.vehicles.length > 0) {
+            setSavedVehicles(res.vehicles);
+            const def = res.vehicles.find((v: any) => v.isDefault) || res.vehicles[0];
+            setSelectedVehicleId(def._id);
+            setLicensePlate(def.registrationNumber || '');
+            setVehicleModel(`${def.manufacturer} ${def.model}`);
+            setVehicleType(def.vehicleType);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    loadUserVehicles();
+  }, [user]);
+
+  const handleSelectVehicle = (vId: string) => {
+    setSelectedVehicleId(vId);
+    if (vId === 'manual') {
+      setLicensePlate('');
+      setVehicleModel('');
+    } else {
+      const v = savedVehicles.find((item) => item._id === vId);
+      if (v) {
+        setLicensePlate(v.registrationNumber || '');
+        setVehicleModel(`${v.manufacturer} ${v.model}`);
+        setVehicleType(v.vehicleType);
+      }
+    }
+  };
 
   // Fetch listing details
   const { data, isLoading, error } = useQuery({
@@ -118,6 +156,7 @@ export const ListingDetails: React.FC = () => {
         serviceType: listing.serviceType,
         startTime: new Date(startDate).toISOString(),
         endTime: new Date(endDate).toISOString(),
+        vehicleId: selectedVehicleId !== 'manual' ? selectedVehicleId : undefined,
         vehicleDetails: {
           licensePlate,
           model: vehicleModel,
@@ -346,13 +385,34 @@ export const ListingDetails: React.FC = () => {
                 </div>
               </div>
 
-              {/* Vehicle input */}
+              {/* Vehicle input & saved vehicle selector */}
               <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">Vehicle Details</label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">Vehicle Selection</label>
+                  <Link to="/vehicles" className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700">
+                    + Add Vehicle
+                  </Link>
+                </div>
+
+                {savedVehicles.length > 0 && (
+                  <select
+                    value={selectedVehicleId}
+                    onChange={(e) => handleSelectVehicle(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer mb-2"
+                  >
+                    {savedVehicles.map((v) => (
+                      <option key={v._id} value={v._id}>
+                        {v.manufacturer} {v.model} ({v.registrationNumber || 'No plate'}) {v.isDefault ? '★ Default' : ''}
+                      </option>
+                    ))}
+                    <option value="manual">Manual Entry / Another Vehicle...</option>
+                  </select>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="License (e.g. KA-01-AB-1234)"
+                    placeholder="Plate (e.g. KA-01-AB-1234)"
                     value={licensePlate}
                     onChange={(e) => setLicensePlate(e.target.value)}
                     className="px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -367,6 +427,18 @@ export const ListingDetails: React.FC = () => {
                     required
                   />
                 </div>
+
+                {/* Compatibility Advice */}
+                {isCharging && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100 text-[11px] text-emerald-900 font-medium flex items-start gap-2 mt-2">
+                    <Zap className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span>
+                        Verified charger compatibility check will run during reservation. Actual charging speed may vary based on your vehicle's onboard intake limits.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Price Breakdown Calculation */}

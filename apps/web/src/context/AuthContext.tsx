@@ -8,9 +8,11 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string) => Promise<void>;
-  register: (userData: any) => Promise<void>;
+  login: (email: string, password?: string, remember?: boolean) => Promise<any>;
+  register: (userData: any) => Promise<any>;
   logout: () => void;
+  selectRole: (role: 'customer' | 'provider') => Promise<void>;
+  refreshUser: () => Promise<void>;
   quickDemoLogin: (targetRole: 'customer' | 'provider' | 'admin') => Promise<void>;
 }
 
@@ -45,15 +47,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, [token]);
 
-  const login = async (email: string, password: string = 'VFlow@123') => {
+  const refreshUser = async () => {
+    try {
+      const res = await api.auth.me();
+      if (res.success && res.user) {
+        setUser(res.user);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const login = async (email: string, password: string = 'VFlow@123', remember: boolean = true) => {
     setIsLoading(true);
     try {
       const res = await api.auth.login({ email, password });
       if (res.success && res.token) {
-        localStorage.setItem('vflow_token', res.token);
+        if (remember) {
+          localStorage.setItem('vflow_token', res.token);
+        } else {
+          sessionStorage.setItem('vflow_token', res.token);
+          localStorage.setItem('vflow_token', res.token);
+        }
         setToken(res.token);
         setUser(res.user);
       }
+      return res;
     } finally {
       setIsLoading(false);
     }
@@ -68,13 +87,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(res.token);
         setUser(res.user);
       }
+      return res;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectRole = async (targetRole: 'customer' | 'provider') => {
+    setIsLoading(true);
+    try {
+      const res = await api.auth.selectRole(targetRole);
+      if (res.success && res.user) {
+        setUser(res.user);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = () => {
+    try {
+      api.auth.logout();
+    } catch (e) {
+      // ignore
+    }
     localStorage.removeItem('vflow_token');
+    sessionStorage.removeItem('vflow_token');
     setToken(null);
     setUser(null);
   };
@@ -99,6 +137,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         register,
         logout,
+        selectRole,
+        refreshUser,
         quickDemoLogin,
       }}
     >

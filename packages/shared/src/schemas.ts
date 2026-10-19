@@ -51,6 +51,43 @@ export const ListingPricingSchema = z.object({
   chargingFlatRatePaise: z.number().nonnegative().optional()
 });
 
+export const CreateVehicleSchema = z.object({
+  vehicleType: z.enum([
+    'electric_car',
+    'petrol_car',
+    'diesel_car',
+    'hybrid_car',
+    'electric_two_wheeler',
+    'petrol_two_wheeler',
+    'electric_three_wheeler',
+    'other'
+  ]),
+  powertrain: z.enum(['electric', 'petrol', 'diesel', 'hybrid', 'other']),
+  manufacturer: z.string().min(1, 'Manufacturer is required'),
+  model: z.string().min(1, 'Model is required'),
+  registrationNumber: z.string().optional(),
+  supportedConnectorTypes: z.array(z.string()).default([]),
+  maxAcPowerKw: z.number().nonnegative().optional(),
+  maxDcPowerKw: z.number().nonnegative().optional(),
+  batteryCapacityKwh: z.number().nonnegative().optional(),
+  isDefault: z.boolean().default(false)
+});
+
+export const UpdateVehicleSchema = CreateVehicleSchema.partial();
+
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Please enter a valid email address')
+});
+
+export const ResetPasswordSchema = z.object({
+  token: z.string().min(1, 'Reset token is required'),
+  newPassword: z.string().min(6, 'Password must be at least 6 characters')
+});
+
+export const RoleSelectionSchema = z.object({
+  role: z.enum(['customer', 'provider'])
+});
+
 export const CreateListingSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters'),
   description: z.string().min(15, 'Description must be at least 15 characters'),
@@ -78,15 +115,31 @@ export const CreateListingSchema = z.object({
   entryExitInstructions: z.string().optional(),
   houseRules: z.array(z.string()).optional(),
   isCovered: z.boolean().default(false),
+  isParkingIncluded: z.boolean().optional(),
+  requiresSimultaneousParking: z.boolean().optional(),
   // Explicit resources setup
   parkingSpacesCount: z.number().int().min(0).default(1),
+  chargingStations: z.array(z.object({
+    stationName: z.string(),
+    manufacturer: z.string().optional(),
+    model: z.string().optional(),
+    chargerType: z.enum(['AC', 'DC', 'DC_Fast']),
+    ratedPowerKw: z.number().positive(),
+    totalPorts: z.number().int().min(1).default(1),
+    status: z.enum(['operational', 'maintenance', 'offline']).default('operational')
+  })).optional(),
   chargingPorts: z.array(z.object({
     portIdentifier: z.string(),
-    chargerType: z.enum(['AC', 'DC_Fast']),
-    connectorType: z.enum(['Type 2', 'CCS2', 'CHAdeMO', 'GB/T', '15A 3-Pin']),
+    chargerType: z.enum(['AC', 'DC', 'DC_Fast']),
+    connectorType: z.string(),
     powerKw: z.number().positive(),
     pricingModel: z.enum(['per_kwh', 'per_hour', 'flat_session', 'parking_plus_charging']),
-    pricePerUnitPaise: z.number().nonnegative()
+    pricePerUnitPaise: z.number().nonnegative(),
+    chargerManufacturer: z.string().optional(),
+    chargerModel: z.string().optional(),
+    isParkingIncluded: z.boolean().optional(),
+    requiresSimultaneousParking: z.boolean().optional(),
+    operatingHours: z.string().optional()
   })).optional()
 });
 
@@ -95,12 +148,16 @@ export const CreateBookingSchema = z.object({
   serviceType: z.enum(['parking', 'charging', 'combined']),
   parkingSpaceId: z.string().optional(),
   chargingPortId: z.string().optional(),
+  vehicleId: z.string().optional(),
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
   vehicleDetails: z.object({
-    licensePlate: z.string().min(3),
+    licensePlate: z.string().optional(),
     model: z.string(),
-    type: z.enum(['two_wheeler', 'hatchback', 'sedan', 'suv', 'ev', 'commercial'])
+    type: z.string().optional(),
+    manufacturer: z.string().optional(),
+    powertrain: z.string().optional(),
+    connectorType: z.string().optional()
   }).optional()
 });
 

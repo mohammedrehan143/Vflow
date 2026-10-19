@@ -17,6 +17,7 @@ import reviewRoutes from './routes/reviewRoutes';
 import favoriteRoutes from './routes/favoriteRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import supportRoutes from './routes/supportRoutes';
+import vehicleRoutes from './routes/vehicleRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -64,6 +65,7 @@ export function createApp() {
   app.use('/api/v1/favorites', favoriteRoutes);
   app.use('/api/v1/notifications', notificationRoutes);
   app.use('/api/v1/support', supportRoutes);
+  app.use('/api/v1/vehicles', vehicleRoutes);
   app.use('/api/v1/admin', adminRoutes);
 
   // 404 handler

@@ -7,6 +7,7 @@ import { PayoutModel } from '../models/Payout';
 import { ListingModel } from '../models/Listing';
 import { ParkingSpaceModel } from '../models/ParkingSpace';
 import { ChargingPortModel } from '../models/ChargingPort';
+import { ChargingStationModel } from '../models/ChargingStation';
 import { ProviderType, ServiceType } from '@vflow/shared';
 
 export class ProviderService {
@@ -181,16 +182,32 @@ export class ProviderService {
 
     const parkingSpaces = await ParkingSpaceModel.find({ providerId });
     const chargingPorts = await ChargingPortModel.find({ providerId });
+    const chargingStations = await ChargingStationModel.find({ providerId });
 
-    // Recent bookings
-    const recentBookings = await BookingModel.find({ providerId })
-      .sort({ createdAt: -1 })
-      .limit(10);
+    // Upcoming vs Completed vs Cancelled bookings
+    const upcomingBookings = await BookingModel.find({
+      providerId,
+      status: { $in: ['confirmed', 'in_progress', 'pending_payment'] }
+    })
+      .sort({ startTime: 1 })
+      .limit(20)
+      .lean();
 
-    // Recent payouts
-    const recentPayouts = await PayoutModel.find({ providerId })
-      .sort({ createdAt: -1 })
-      .limit(10);
+    const completedBookings = await BookingModel.find({
+      providerId,
+      status: 'completed'
+    })
+      .sort({ endTime: -1 })
+      .limit(20)
+      .lean();
+
+    // Payout categories
+    const [pendingPayouts, completedPayouts, failedPayouts, heldPayouts] = await Promise.all([
+      PayoutModel.find({ providerId, status: 'pending' }).sort({ createdAt: -1 }),
+      PayoutModel.find({ providerId, status: 'paid' }).sort({ createdAt: -1 }),
+      PayoutModel.find({ providerId, status: 'failed' }).sort({ createdAt: -1 }),
+      PayoutModel.find({ providerId, status: 'held' }).sort({ createdAt: -1 })
+    ]);
 
     // Ledger entries
     const pendingLedgerEntries = await FinancialLedgerModel.find({
@@ -203,16 +220,22 @@ export class ProviderService {
       resources: {
         totalListings: listings.length,
         totalParkingSpaces: parkingSpaces.length,
+        totalChargingStations: chargingStations.length,
         totalChargingPorts: chargingPorts.length,
         listings,
         parkingSpaces,
+        chargingStations,
         chargingPorts
       },
       bookings: {
         total: (refreshed?.totalParkingBookings || 0) + (refreshed?.totalChargingSessions || 0),
+        totalParkingBookings: refreshed?.totalParkingBookings || 0,
+        totalChargingSessions: refreshed?.totalChargingSessions || 0,
         completed: refreshed?.totalCompletedBookings || 0,
         cancelled: refreshed?.totalCancelledBookings || 0,
-        recent: recentBookings
+        upcoming: upcomingBookings,
+        completedList: completedBookings,
+        recent: upcomingBookings.concat(completedBookings).slice(0, 10)
       },
       financials: {
         grossRevenue: refreshed?.grossRevenue || 0,
@@ -223,7 +246,13 @@ export class ProviderService {
         paidOutAmount: refreshed?.paidOutAmount || 0,
         lastPayoutDate: refreshed?.lastPayoutDate,
         pendingLedgerEntries,
-        recentPayouts
+        payouts: {
+          pending: pendingPayouts,
+          completed: completedPayouts,
+          failed: failedPayouts,
+          held: heldPayouts
+        },
+        recentPayouts: completedPayouts.concat(pendingPayouts).slice(0, 10)
       }
     };
   }

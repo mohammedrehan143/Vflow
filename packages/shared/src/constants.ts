@@ -24,8 +24,31 @@ export const CONNECTOR_TYPE_LABELS: Record<string, string> = {
   'CCS2': 'CCS-2 DC Fast (up to 350 kW)',
   'CHAdeMO': 'CHAdeMO DC Fast (up to 50 kW)',
   'GB/T': 'GB/T DC Fast (up to 15 kW)',
-  '15A 3-Pin': '15A Domestic 3-Pin Socket (3.3 kW)'
+  '15A 3-Pin': '15A Domestic 3-Pin Socket (3.3 kW)',
+  'Bharat AC-001': 'Bharat AC-001 (10 kW / 3.3 kW x 3)',
+  'Bharat DC-001': 'Bharat DC-001 (15 kW / 48V-72V DC)'
 };
+
+export const VEHICLE_TYPE_LABELS: Record<string, string> = {
+  electric_car: 'Electric Car (EV)',
+  petrol_car: 'Petrol Car',
+  diesel_car: 'Diesel Car',
+  hybrid_car: 'Hybrid Car (PHEV / HEV)',
+  electric_two_wheeler: 'Electric Two-Wheeler (Scooter / Bike)',
+  petrol_two_wheeler: 'Petrol Two-Wheeler',
+  electric_three_wheeler: 'Electric Three-Wheeler (Auto)',
+  other: 'Other Vehicle'
+};
+
+export const POWERTRAIN_LABELS: Record<string, string> = {
+  electric: 'Pure Electric (Battery EV)',
+  petrol: 'Petrol (ICE)',
+  diesel: 'Diesel (ICE)',
+  hybrid: 'Hybrid (PHEV / Strong Hybrid)',
+  other: 'Other'
+};
+
+export const COMMON_CHARGER_POWERS_KW = [3.3, 7.4, 11, 22, 30, 50, 60, 120, 150];
 
 export const CANCELLATION_POLICIES = {
   flexible: {

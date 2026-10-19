@@ -22,9 +22,29 @@ export type VehicleRestriction = 'two_wheeler' | 'hatchback' | 'sedan' | 'suv' |
 
 export type CancellationPolicyType = 'flexible' | 'moderate' | 'strict';
 
-export type ChargerType = 'AC' | 'DC_Fast';
+export type CustomerVehicleType =
+  | 'electric_car'
+  | 'petrol_car'
+  | 'diesel_car'
+  | 'hybrid_car'
+  | 'electric_two_wheeler'
+  | 'petrol_two_wheeler'
+  | 'electric_three_wheeler'
+  | 'other';
 
-export type ConnectorType = 'Type 2' | 'CCS2' | 'CHAdeMO' | 'GB/T' | '15A 3-Pin';
+export type PowertrainType = 'electric' | 'petrol' | 'diesel' | 'hybrid' | 'other';
+
+export type ChargerType = 'AC' | 'DC' | 'DC_Fast';
+
+export type ConnectorType =
+  | 'Type 2'
+  | 'CCS2'
+  | 'CHAdeMO'
+  | 'GB/T'
+  | '15A 3-Pin'
+  | 'Bharat AC-001'
+  | 'Bharat DC-001'
+  | string;
 
 export type ChargingPricingModel = 'per_kwh' | 'per_hour' | 'flat_session' | 'parking_plus_charging';
 
@@ -140,17 +160,56 @@ export interface IParkingSpace {
   status: 'available' | 'maintenance' | 'occupied' | 'inactive';
 }
 
+export interface IVehicle {
+  _id: string;
+  userId: string;
+  vehicleType: CustomerVehicleType;
+  powertrain: PowertrainType;
+  manufacturer: string;
+  model: string;
+  registrationNumber?: string;
+  supportedConnectorTypes: ConnectorType[];
+  maxAcPowerKw?: number;
+  maxDcPowerKw?: number;
+  batteryCapacityKwh?: number;
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IChargingStation {
+  _id: string;
+  listingId: string;
+  providerId: string;
+  stationName: string;
+  manufacturer?: string;
+  model?: string;
+  chargerType: ChargerType;
+  ratedPowerKw: number;
+  totalPorts: number;
+  status: 'operational' | 'maintenance' | 'offline';
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface IChargingPort {
   _id: string;
   listingId: string;
   providerId: string;
+  stationId?: string;
   portIdentifier: string; // e.g. "Gun #1"
   chargerType: ChargerType;
   connectorType: ConnectorType;
   powerKw: number;
+  ratedPowerKw?: number;
+  chargerManufacturer?: string;
+  chargerModel?: string;
   pricingModel: ChargingPricingModel;
   pricePerUnitPaise: number; // paise per kWh or per hour or flat
   attachedParkingSpaceId?: string;
+  isParkingIncluded?: boolean;
+  requiresSimultaneousParking?: boolean;
+  operatingHours?: string;
   status: 'available' | 'charging' | 'offline' | 'maintenance';
 }
 
@@ -180,10 +239,13 @@ export interface IListing {
   entryExitInstructions?: string;
   houseRules?: string[];
   isCovered?: boolean;
+  isParkingIncluded?: boolean;
+  requiresSimultaneousParking?: boolean;
   status: ListingStatus;
   averageRating: number;
   reviewCount: number;
   chargingPorts?: IChargingPort[];
+  chargingStations?: IChargingStation[];
   parkingSpaces?: IParkingSpace[];
   createdAt: string;
   updatedAt: string;
@@ -207,6 +269,7 @@ export interface IBooking {
   serviceType: ServiceType;
   parkingSpaceId?: string;
   chargingPortId?: string;
+  vehicleId?: string;
   startTime: string; // ISO date string
   endTime: string;   // ISO date string
   status: BookingStatus;
@@ -215,9 +278,12 @@ export interface IBooking {
   paymentStatus: PaymentStatus;
   accessPin?: string;
   vehicleDetails?: {
-    licensePlate: string;
+    licensePlate?: string;
     model: string;
-    type: VehicleRestriction;
+    type?: string;
+    manufacturer?: string;
+    powertrain?: string;
+    connectorType?: string;
   };
   cancellationReason?: string;
   cancelledAt?: string;

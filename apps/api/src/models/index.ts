@@ -15,3 +15,5 @@ export * from './Notification';
 export * from './WaitlistEntry';
 export * from './AdminAuditLog';
 export * from './SupportTicket';
+export * from './Vehicle';
+export * from './ChargingStation';

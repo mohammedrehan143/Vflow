@@ -20,6 +20,13 @@ router.get('/', async (req, res, next) => {
       maxPricePaise: req.query.maxPrice ? Number(req.query.maxPrice) * 100 : undefined,
       instantBookingOnly: req.query.instantBooking === 'true',
       isCovered: req.query.isCovered ? req.query.isCovered === 'true' : undefined,
+      chargerType: req.query.chargerType as any,
+      minPowerKw: req.query.minPowerKw ? Number(req.query.minPowerKw) : undefined,
+      maxPowerKw: req.query.maxPowerKw ? Number(req.query.maxPowerKw) : undefined,
+      connectorType: req.query.connectorType as any,
+      isParkingIncluded: req.query.isParkingIncluded !== undefined ? req.query.isParkingIncluded === 'true' : undefined,
+      speedCategory: req.query.speedCategory as any,
+      vehicleId: req.query.vehicleId as string,
       page: req.query.page ? Number(req.query.page) : 1,
       limit: req.query.limit ? Number(req.query.limit) : 20
     };

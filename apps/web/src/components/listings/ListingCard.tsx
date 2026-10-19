@@ -96,16 +96,40 @@ export const ListingCard: React.FC<ListingCardProps> = ({ listing }) => {
             {listing.title}
           </h3>
 
-          {/* Technical EV specs if charging is present */}
-          {isCharging && listing.chargingPorts && listing.chargingPorts.length > 0 && (
-            <div className="mt-2.5 py-1.5 px-2 bg-emerald-50 rounded-lg flex items-center justify-between text-xs text-emerald-900">
+          {/* Prominent Charger Specifications Badge */}
+          {((listing as any).specBadge || (isCharging && listing.chargingPorts && listing.chargingPorts.length > 0)) && (
+            <div className="mt-2.5 py-1.5 px-2.5 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between text-xs text-emerald-950 font-bold">
               <div className="flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600" />
-                <span className="font-semibold">{listing.chargingPorts[0].connectorType}</span>
+                <Zap className="w-3.5 h-3.5 text-emerald-600 fill-emerald-600 shrink-0" />
+                <span className="truncate">
+                  {(listing as any).specBadge ||
+                    `${listing.chargingPorts?.[0]?.powerKw || 22} kW ${listing.chargingPorts?.[0]?.chargerType || 'AC'} · ${
+                      listing.chargingPorts?.[0]?.connectorType || 'Type 2'
+                    }${listing.isCovered ? ' · Parking Available' : ''}`}
+                </span>
               </div>
-              <span className="bg-emerald-200/80 px-2 py-0.5 rounded font-bold text-[11px]">
-                {listing.chargingPorts[0].powerKw} kW {listing.chargingPorts[0].chargerType}
-              </span>
+            </div>
+          )}
+
+          {/* Vehicle Compatibility Status Badge if available */}
+          {(listing as any).compatibility && (
+            <div className="mt-1.5 text-[11px]">
+              {(listing as any).compatibility.compatible ? (
+                <div className="text-emerald-700 bg-emerald-50/80 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 shrink-0" />
+                  <span className="truncate">
+                    Compatible (up to {(listing as any).compatibility.effectivePowerKw} kW)
+                    {(listing as any).compatibility.isSpeedThrottled && ' · Speed capped by car limit'}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-red-700 bg-red-50/80 px-2 py-0.5 rounded-md font-semibold flex items-center gap-1">
+                  <span className="shrink-0">✕</span>
+                  <span className="truncate">
+                    Incompatible: {(listing as any).compatibility.reasons?.[0] || 'Connector mismatch'}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

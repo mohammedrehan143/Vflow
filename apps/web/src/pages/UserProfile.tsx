@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
+import { IVehicle } from '@vflow/shared';
 import {
   User,
   Car,
@@ -11,53 +14,55 @@ import {
   Trash2,
   CheckCircle2,
   LogOut,
+  ArrowRight,
+  RefreshCw,
+  Building2,
 } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
-  const { user, role, logout } = useAuth();
+  const { user, role, logout, selectRole, refreshUser } = useAuth();
+  const [vehicles, setVehicles] = useState<IVehicle[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [roleChanging, setRoleChanging] = useState(false);
 
-  const [vehicles, setVehicles] = useState([
-    {
-      id: 'v1',
-      model: 'Tata Nexon EV Max',
-      licensePlate: 'KA-01-MJ-4050',
-      type: 'ev',
-      isDefault: true,
-    },
-    {
-      id: 'v2',
-      model: 'Hyundai Creta',
-      licensePlate: 'KA-03-NB-8821',
-      type: 'suv',
-      isDefault: false,
-    },
-  ]);
-
-  const [newModel, setNewModel] = useState('');
-  const [newPlate, setNewPlate] = useState('');
-  const [newType, setNewType] = useState('ev');
-  const [showAddModal, setShowAddModal] = useState(false);
-
-  const handleAddVehicle = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newModel || !newPlate) return;
-    setVehicles([
-      ...vehicles,
-      {
-        id: `v_${Date.now()}`,
-        model: newModel,
-        licensePlate: newPlate,
-        type: newType,
-        isDefault: vehicles.length === 0,
-      },
-    ]);
-    setNewModel('');
-    setNewPlate('');
-    setShowAddModal(false);
+  const fetchVehicles = async () => {
+    setLoadingVehicles(true);
+    try {
+      const res = await api.vehicles.list();
+      if (res.success && res.vehicles) {
+        setVehicles(res.vehicles);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingVehicles(false);
+    }
   };
 
-  const removeVehicle = (id: string) => {
-    setVehicles(vehicles.filter((v) => v.id !== id));
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const handleRoleSwitch = async (newRole: 'customer' | 'provider') => {
+    setRoleChanging(true);
+    try {
+      await selectRole(newRole);
+      await refreshUser();
+    } catch (e: any) {
+      alert(e.message || 'Failed to change role');
+    } finally {
+      setRoleChanging(false);
+    }
+  };
+
+  const removeVehicle = async (id: string) => {
+    if (!confirm('Remove this vehicle?')) return;
+    try {
+      await api.vehicles.delete(id);
+      await fetchVehicles();
+    } catch (e: any) {
+      alert(e.message || 'Failed to remove vehicle');
+    }
   };
 
   return (
@@ -65,11 +70,11 @@ export const UserProfile: React.FC = () => {
       <div>
         <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 uppercase tracking-wider">
           <User className="w-4 h-4" />
-          <span>Account Settings</span>
+          <span>Account Settings & Role Control</span>
         </div>
         <h1 className="text-3xl font-extrabold text-slate-900 mt-1">Profile & Vehicles</h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-          Manage your personal details, registered vehicles, and security preferences
+          Manage your personal details, role-based permissions, and registered vehicles linked to MongoDB & Supabase.
         </p>
       </div>
 
@@ -81,17 +86,50 @@ export const UserProfile: React.FC = () => {
               {user?.fullName?.charAt(0) || 'U'}
             </div>
             <div>
-              <h3 className="font-extrabold text-slate-900 text-lg">{user?.fullName || 'Guest Driver'}</h3>
+              <h3 className="font-extrabold text-slate-900 text-lg">{user?.fullName || 'Active User'}</h3>
               <span className="text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                {role || 'Customer'}
+                {role === 'provider' ? 'Parking & Charging Host' : 'Customer / Driver'}
               </span>
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-slate-100 text-xs">
+          {/* Role Switching Section */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            <span className="text-[11px] font-bold text-slate-500 uppercase block">Switch Account Role</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={roleChanging || role === 'customer'}
+                onClick={() => handleRoleSwitch('customer')}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  role === 'customer'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>Driver</span>
+              </button>
+              <button
+                type="button"
+                disabled={roleChanging || role === 'provider'}
+                onClick={() => handleRoleSwitch('provider')}
+                className={`py-1.5 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 ${
+                  role === 'provider'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                <span>Host</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2 text-xs">
             <div className="flex items-center gap-3 text-slate-600">
               <Mail className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>{user?.email || 'driver@vflow.in'}</span>
+              <span>{user?.email || 'user@vflow.in'}</span>
             </div>
             <div className="flex items-center gap-3 text-slate-600">
               <Phone className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -99,7 +137,7 @@ export const UserProfile: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 text-slate-600">
               <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Identity Verified via Supabase & Mobile OTP</span>
+              <span>Identity Verified via Supabase Auth</span>
             </div>
           </div>
 
@@ -117,87 +155,88 @@ export const UserProfile: React.FC = () => {
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="font-bold text-slate-900 text-base">Registered Vehicles</h3>
-              <p className="text-xs text-slate-500">Auto-fills vehicle details during fast checkout</p>
+              <p className="text-xs text-slate-500">Auto-checks charger compatibility and fast checkout</p>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
+            <Link
+              to="/vehicles"
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Vehicle</span>
-            </button>
+              <span>Manage Vehicles</span>
+            </Link>
           </div>
 
-          <div className="space-y-3">
-            {vehicles.map((v) => (
-              <div
-                key={v.id}
-                className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700">
-                    {v.type === 'ev' ? <Zap className="w-5 h-5 text-emerald-600 fill-emerald-600" /> : <Car className="w-5 h-5 text-slate-600" />}
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                      <span>{v.model}</span>
-                      {v.isDefault && (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                          Default
-                        </span>
+          {loadingVehicles ? (
+            <div className="space-y-2">
+              <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-16 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+          ) : vehicles.length > 0 ? (
+            <div className="space-y-3">
+              {vehicles.map((v) => (
+                <div
+                  key={v._id}
+                  className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-700 shrink-0">
+                      {v.powertrain === 'electric' || v.powertrain === 'hybrid' ? (
+                        <Zap className="w-5 h-5 text-emerald-600 fill-emerald-600" />
+                      ) : (
+                        <Car className="w-5 h-5 text-slate-600" />
                       )}
                     </div>
-                    <div className="font-mono text-xs text-slate-500">{v.licensePlate}</div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <span>
+                          {v.manufacturer} {v.model}
+                        </span>
+                        {v.isDefault && (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {v.registrationNumber ? `${v.registrationNumber} · ` : ''}
+                        {v.vehicleType} · {v.powertrain}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => removeVehicle(v._id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
+              ))}
 
-                <button
-                  onClick={() => removeVehicle(v.id)}
-                  className="p-2 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition"
+              <div className="pt-2 text-right">
+                <Link
+                  to="/vehicles"
+                  className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1"
                 >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                  <span>Open Full Vehicle Manager with Connectors & Power Limits</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-            ))}
-          </div>
-
-          {showAddModal && (
-            <form onSubmit={handleAddVehicle} className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 space-y-3">
-              <h4 className="font-bold text-xs text-emerald-950 uppercase">Register New Vehicle</h4>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Make & Model (e.g. BMW i4)"
-                  value={newModel}
-                  onChange={(e) => setNewModel(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="License Plate (e.g. DL-01-AB-9999)"
-                  value={newPlate}
-                  onChange={(e) => setNewPlate(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold"
-                >
-                  Save Vehicle
-                </button>
-              </div>
-            </form>
+            </div>
+          ) : (
+            <div className="text-center py-8 space-y-3">
+              <Car className="w-8 h-8 text-slate-300 mx-auto" />
+              <div className="text-xs text-slate-500">No vehicles registered yet.</div>
+              <Link
+                to="/vehicles"
+                className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-sm"
+              >
+                Add Your Vehicle Now
+              </Link>
+            </div>
           )}
         </div>
       </div>

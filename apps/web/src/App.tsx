@@ -20,6 +20,7 @@ import { ProviderPayouts } from './pages/ProviderPayouts';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { AuthPage } from './pages/AuthPage';
 import { UserProfile } from './pages/UserProfile';
+import { VehicleManagement } from './pages/VehicleManagement';
 import { InstallPWA } from './pages/InstallPWA';
 import {
   AboutPage,
@@ -66,6 +67,7 @@ export const App: React.FC = () => {
           <Route path="/login" element={<Navigate to="/auth" replace />} />
           <Route path="/register" element={<Navigate to="/auth?mode=register" replace />} />
           <Route path="/profile" element={<UserProfile />} />
+          <Route path="/vehicles" element={<VehicleManagement />} />
 
           {/* PWA Installation & Offline */}
           <Route path="/install-pwa" element={<InstallPWA />} />

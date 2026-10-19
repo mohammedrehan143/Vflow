@@ -9,6 +9,9 @@ export interface IUserDocument extends Document {
   phone?: string;
   role: UserRole;
   profileImage?: string;
+  emailVerified?: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   vehicles: Array<{
     licensePlate: string;
     model: string;
@@ -31,9 +34,12 @@ const UserSchema = new Schema<IUserDocument>(
       type: String,
       enum: ['customer', 'provider', 'admin'],
       default: 'customer',
-      index: true
+      index: true,
     },
     profileImage: { type: String },
+    emailVerified: { type: Boolean, default: false },
+    resetPasswordToken: { type: String },
+    resetPasswordExpires: { type: Date },
     vehicles: [
       {
         licensePlate: { type: String, required: true },
@@ -41,12 +47,12 @@ const UserSchema = new Schema<IUserDocument>(
         type: {
           type: String,
           enum: ['two_wheeler', 'hatchback', 'sedan', 'suv', 'ev', 'commercial'],
-          default: 'sedan'
+          default: 'sedan',
         },
-        isDefault: { type: Boolean, default: false }
-      }
+        isDefault: { type: Boolean, default: false },
+      },
     ],
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

@@ -175,6 +175,13 @@ export const Navbar: React.FC = () => {
           {user ? (
             <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
               <Link
+                to="/vehicles"
+                className="text-slate-600 hover:text-slate-900 text-sm font-medium p-2 rounded-lg hover:bg-slate-100"
+                title="My Vehicles"
+              >
+                <Car className="w-4 h-4" />
+              </Link>
+              <Link
                 to="/bookings"
                 className="text-slate-600 hover:text-slate-900 text-sm font-medium p-2 rounded-lg hover:bg-slate-100"
                 title="My Bookings"
@@ -272,6 +279,14 @@ export const Navbar: React.FC = () => {
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
                 Coming Soon
               </span>
+            </Link>
+            <Link
+              to="/vehicles"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-700 hover:bg-slate-100 text-sm font-medium"
+            >
+              <Car className="w-5 h-5 text-slate-600" />
+              My Vehicles & Compatibility
             </Link>
             <Link
               to="/bookings"

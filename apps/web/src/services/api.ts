@@ -7,6 +7,7 @@ import {
   IPayout,
   IHangoutPlace,
   UserRole,
+  IVehicle,
 } from '@vflow/shared';
 
 const API_BASE = '/api/v1';
@@ -61,6 +62,51 @@ export const api = {
         body: JSON.stringify(userData),
       }),
     me: () => fetchJson<{ success: boolean; user: AuthUser }>('/auth/me'),
+    forgotPassword: (email: string) =>
+      fetchJson<{ success: boolean; message: string; resetToken?: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    resetPassword: (token: string, newPassword: string) =>
+      fetchJson<{ success: boolean; message: string }>('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ token, newPassword }),
+      }),
+    verifyEmail: (email: string) =>
+      fetchJson<{ success: boolean; message: string }>('/auth/verify-email', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+    selectRole: (role: 'customer' | 'provider') =>
+      fetchJson<{ success: boolean; role: string; user: AuthUser }>('/auth/role-selection', {
+        method: 'POST',
+        body: JSON.stringify({ role }),
+      }),
+    logout: () => fetchJson<{ success: boolean; message: string }>('/auth/logout', { method: 'POST' }),
+  },
+
+  // Vehicles Management
+  vehicles: {
+    list: () => fetchJson<{ success: boolean; vehicles: IVehicle[] }>('/vehicles'),
+    getDefault: () => fetchJson<{ success: boolean; vehicle: IVehicle | null }>('/vehicles/default'),
+    add: (data: any) =>
+      fetchJson<{ success: boolean; vehicle: IVehicle }>('/vehicles', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: any) =>
+      fetchJson<{ success: boolean; vehicle: IVehicle }>(`/vehicles/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    setDefault: (id: string) =>
+      fetchJson<{ success: boolean; vehicle: IVehicle }>(`/vehicles/${id}/default`, {
+        method: 'PATCH',
+      }),
+    delete: (id: string) =>
+      fetchJson<{ success: boolean }>(`/vehicles/${id}`, {
+        method: 'DELETE',
+      }),
   },
 
   // Listings
@@ -74,8 +120,16 @@ export const api = {
       minPrice?: number;
       maxPrice?: number;
       connectorType?: string;
+      chargerType?: string;
+      minPowerKw?: number;
+      maxPowerKw?: number;
+      isParkingIncluded?: boolean;
+      speedCategory?: string;
+      vehicleId?: string;
       isCovered?: boolean;
       instantBooking?: boolean;
+      page?: number;
+      limit?: number;
     }) => {
       const query = new URLSearchParams();
       if (params) {
@@ -83,14 +137,20 @@ export const api = {
           if (v !== undefined && v !== null && v !== '') query.append(k, String(v));
         });
       }
-      return fetchJson<{ success: boolean; listings: IListing[]; pagination: any }>(
+      return fetchJson<{ success: boolean; listings: (IListing & { specBadge?: string; compatibility?: any })[]; pagination: any }>(
         `/listings?${query.toString()}`
       );
     },
     getById: (id: string) =>
-      fetchJson<{ success: boolean; listing: IListing; provider: Partial<IProvider> }>(
-        `/listings/${id}`
-      ),
+      fetchJson<{
+        success: boolean;
+        listing: IListing;
+        provider: Partial<IProvider>;
+        parkingSpaces?: any[];
+        chargingPorts?: any[];
+        chargingStations?: any[];
+        specBadge?: string;
+      }>(`/listings/${id}`),
     create: (data: any) =>
       fetchJson<{ success: boolean; listing: IListing }>('/listings', {
         method: 'POST',
@@ -112,6 +172,7 @@ export const api = {
       endTime: string;
       parkingSpaceId?: string;
       chargingPortId?: string;
+      vehicleId?: string;
       vehicleDetails?: any;
     }) =>
       fetchJson<{ success: boolean; booking: IBooking }>('/bookings', {
@@ -128,7 +189,7 @@ export const api = {
       }>(`/bookings/${id}`),
     getMyBookings: () =>
       fetchJson<{ success: boolean; bookings: (IBooking & { listing?: any })[] }>(
-        '/bookings/my'
+        '/bookings/customer/mine'
       ),
     cancel: (id: string, reason?: string) =>
       fetchJson<{ success: boolean; booking: IBooking; refundPreview?: any }>(
@@ -181,25 +242,38 @@ export const api = {
       fetchJson<{ success: boolean; provider: IProvider; listings: IListing[] }>(
         '/providers/me'
       ),
-    getDashboardMetrics: () =>
+    getDashboardOverview: () =>
       fetchJson<{
         success: boolean;
-        metrics: {
-          totalParkingBookings: number;
-          totalChargingSessions: number;
-          completedBookings: number;
-          cancelledBookings: number;
-          grossRevenuePaise: number;
-          platformCommissionPaise: number;
-          netEarningsPaise: number;
-          pendingPayoutPaise: number;
-          paidOutPaise: number;
-          activeListingsCount: number;
+        overview: any;
+      }>('/providers/dashboard'),
+    getResources: () =>
+      fetchJson<{
+        success: boolean;
+        resources: {
+          spaces: any[];
+          stations: any[];
+          ports: any[];
         };
-      }>('/providers/metrics'),
+      }>('/providers/resources'),
+    updateSpace: (id: string, data: any) =>
+      fetchJson<{ success: boolean; space: any }>(`/providers/resources/spaces/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    updatePort: (id: string, data: any) =>
+      fetchJson<{ success: boolean; port: any }>(`/providers/resources/ports/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    updateStation: (id: string, data: any) =>
+      fetchJson<{ success: boolean; station: any }>(`/providers/resources/stations/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
     getBookings: () =>
       fetchJson<{ success: boolean; bookings: (IBooking & { listing?: any })[] }>(
-        '/providers/bookings'
+        '/bookings/provider/mine'
       ),
     getPayouts: () =>
       fetchJson<{

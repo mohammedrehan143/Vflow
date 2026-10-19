@@ -66,4 +66,72 @@ router.put('/payout-config', authenticate, async (req, res, next) => {
   }
 });
 
+// Get provider resources (spaces, stations, ports)
+router.get('/resources', authenticate, async (req, res, next) => {
+  try {
+    const provider = await ProviderService.getProviderByAuthId(req.user!.id);
+    if (!provider) {
+      res.status(404).json({ success: false, error: 'Provider profile not found' });
+      return;
+    }
+
+    const { ListingService } = await import('../services/listingService');
+    const resources = await ListingService.getProviderResources(provider._id.toString());
+    res.json({ success: true, resources });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update individual parking space
+router.patch('/resources/spaces/:id', authenticate, async (req, res, next) => {
+  try {
+    const provider = await ProviderService.getProviderByAuthId(req.user!.id);
+    if (!provider) {
+      res.status(404).json({ success: false, error: 'Provider profile not found' });
+      return;
+    }
+
+    const { ListingService } = await import('../services/listingService');
+    const updated = await ListingService.updateParkingSpace(req.params.id, provider._id.toString(), req.body);
+    res.json({ success: true, space: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update individual charging port
+router.patch('/resources/ports/:id', authenticate, async (req, res, next) => {
+  try {
+    const provider = await ProviderService.getProviderByAuthId(req.user!.id);
+    if (!provider) {
+      res.status(404).json({ success: false, error: 'Provider profile not found' });
+      return;
+    }
+
+    const { ListingService } = await import('../services/listingService');
+    const updated = await ListingService.updateChargingPort(req.params.id, provider._id.toString(), req.body);
+    res.json({ success: true, port: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Update individual charging station
+router.patch('/resources/stations/:id', authenticate, async (req, res, next) => {
+  try {
+    const provider = await ProviderService.getProviderByAuthId(req.user!.id);
+    if (!provider) {
+      res.status(404).json({ success: false, error: 'Provider profile not found' });
+      return;
+    }
+
+    const { ListingService } = await import('../services/listingService');
+    const updated = await ListingService.updateChargingStation(req.params.id, provider._id.toString(), req.body);
+    res.json({ success: true, station: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

@@ -3,6 +3,8 @@ import { ListingModel } from '../models/Listing';
 import { ParkingSpaceModel } from '../models/ParkingSpace';
 import { ChargingPortModel } from '../models/ChargingPort';
 import { ChargingSessionModel } from '../models/ChargingSession';
+import { VehicleModel } from '../models/Vehicle';
+import { CompatibilityService } from './compatibilityService';
 import { ServiceType, BookingStatus, PLATFORM_CONFIG } from '@vflow/shared';
 import crypto from 'crypto';
 import { SettlementService } from './settlementService';
@@ -73,12 +75,16 @@ export class BookingService {
     serviceType: ServiceType;
     parkingSpaceId?: string;
     chargingPortId?: string;
+    vehicleId?: string;
     startTime: string;
     endTime: string;
     vehicleDetails?: {
-      licensePlate: string;
+      licensePlate?: string;
       model: string;
-      type: any;
+      type?: any;
+      manufacturer?: string;
+      powertrain?: string;
+      connectorType?: string;
     };
   }): Promise<IBookingDocument> {
     const listing = await ListingModel.findById(data.listingId);
@@ -90,10 +96,48 @@ export class BookingService {
       throw new Error('End time must be after start time');
     }
 
-    // Auto-select resource if not provided
+    // Vehicle lookup and authorization
+    let vehicleDoc: any = null;
+    let resolvedVehicleDetails = data.vehicleDetails;
+
+    if (data.vehicleId) {
+      vehicleDoc = await VehicleModel.findById(data.vehicleId);
+      if (!vehicleDoc) {
+        throw new Error('Selected vehicle not found');
+      }
+      if (vehicleDoc.userId.toString() !== data.customerId) {
+        throw new Error('Unauthorized vehicle selection');
+      }
+      resolvedVehicleDetails = {
+        licensePlate: vehicleDoc.registrationNumber || '',
+        model: `${vehicleDoc.make} ${vehicleDoc.model}`,
+        type: vehicleDoc.vehicleType,
+        manufacturer: vehicleDoc.make,
+        powertrain: vehicleDoc.powertrain,
+        connectorType: vehicleDoc.supportedConnectors?.join(', ')
+      };
+    }
+
+    // Auto-select or validate resource
     let spaceId = data.parkingSpaceId;
     let portId = data.chargingPortId;
 
+    // Validate explicitly provided port compatibility
+    if (portId && (data.serviceType === 'charging' || data.serviceType === 'combined') && vehicleDoc) {
+      const explicitPort = await ChargingPortModel.findById(portId);
+      if (explicitPort) {
+        const compat = CompatibilityService.checkCompatibility(vehicleDoc, {
+          chargerType: explicitPort.chargerType as any,
+          connectorType: explicitPort.connectorType as any,
+          powerKw: explicitPort.powerKw
+        });
+        if (!compat.isCompatible) {
+          throw new Error(`Incompatible vehicle for this charger: ${compat.reason || 'Connector or charger type mismatch'}`);
+        }
+      }
+    }
+
+    // Auto-select parking space if needed
     if (!spaceId && (data.serviceType === 'parking' || data.serviceType === 'combined')) {
       const availableSpaces = await ParkingSpaceModel.find({
         listingId: data.listingId,
@@ -116,12 +160,23 @@ export class BookingService {
       }
     }
 
+    // Auto-select charging port if needed
     if (!portId && (data.serviceType === 'charging' || data.serviceType === 'combined')) {
       const availablePorts = await ChargingPortModel.find({
         listingId: data.listingId,
         status: 'available'
       });
       for (const cp of availablePorts) {
+        if (vehicleDoc) {
+          const compat = CompatibilityService.checkCompatibility(vehicleDoc, {
+            chargerType: cp.chargerType as any,
+            connectorType: cp.connectorType as any,
+            powerKw: cp.powerKw
+          });
+          if (!compat.isCompatible) {
+            continue;
+          }
+        }
         const check = await this.checkAvailability({
           listingId: data.listingId,
           chargingPortId: cp._id.toString(),
@@ -134,7 +189,11 @@ export class BookingService {
         }
       }
       if (!portId) {
-        throw new Error('No charging ports available for the selected time interval');
+        throw new Error(
+          vehicleDoc
+            ? 'No compatible charging ports available for this vehicle for the selected time interval'
+            : 'No charging ports available for the selected time interval'
+        );
       }
     }
 
@@ -193,6 +252,7 @@ export class BookingService {
       serviceType: data.serviceType,
       parkingSpaceId: spaceId,
       chargingPortId: portId,
+      vehicleId: data.vehicleId,
       startTime: data.startTime,
       endTime: data.endTime,
       status: 'pending_payment',
@@ -206,7 +266,7 @@ export class BookingService {
       },
       paymentStatus: 'created',
       accessPin,
-      vehicleDetails: data.vehicleDetails
+      vehicleDetails: resolvedVehicleDetails
     });
 
     return booking;

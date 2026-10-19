@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePWA } from '../context/PWAContext';
 import { api } from '../services/api';
 import { IVehicle } from '@vflow/shared';
 import {
@@ -17,10 +18,14 @@ import {
   ArrowRight,
   RefreshCw,
   Building2,
+  Download,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 
 export const UserProfile: React.FC = () => {
   const { user, role, logout, selectRole, refreshUser } = useAuth();
+  const { openInstallFlow, isStandalone, isInstalled, isInstallable } = usePWA();
   const [vehicles, setVehicles] = useState<IVehicle[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(true);
   const [roleChanging, setRoleChanging] = useState(false);
@@ -139,6 +144,51 @@ export const UserProfile: React.FC = () => {
               <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Identity Verified via Supabase Auth</span>
             </div>
+          </div>
+
+          {/* PWA App Installation Card */}
+          <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-emerald-700" />
+                <span className="font-bold text-xs text-slate-900">VFlow App (PWA)</span>
+              </div>
+              {isStandalone || isInstalled ? (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-900">
+                  Installed
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                  Available
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              {isStandalone
+                ? "You are currently running VFlow in standalone app mode."
+                : isInstalled
+                ? "VFlow is installed on your device launcher or home screen."
+                : "Install VFlow on your phone or desktop for lightning-fast reservations and offline support."}
+            </p>
+            {!isStandalone && (
+              <div className="pt-1 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={openInstallFlow}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Install App</span>
+                </button>
+                <Link
+                  to="/install-pwa"
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 hover:underline"
+                >
+                  <span>Manual Guide</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
           </div>
 
           <button

@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
+import { InstallPromptPopup } from './components/common/InstallPromptPopup';
 
 // Pages
 import { Home } from './pages/Home';
@@ -101,6 +102,7 @@ export const App: React.FC = () => {
       </main>
 
       <Footer />
+      <InstallPromptPopup />
     </div>
   );
 };

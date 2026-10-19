@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { usePWA } from '../../context/PWAContext';
 import {
   Zap,
   Menu,
@@ -18,6 +19,7 @@ import {
 
 export const Navbar: React.FC = () => {
   const { user, role, logout, quickDemoLogin } = useAuth();
+  const { openInstallFlow, isStandalone } = usePWA();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [demoSwitchOpen, setDemoSwitchOpen] = useState(false);
   const navigate = useNavigate();
@@ -136,14 +138,18 @@ export const Navbar: React.FC = () => {
 
         {/* Action Controls & User Menu */}
         <div className="hidden lg:flex items-center gap-3">
-          {/* PWA Install Link */}
-          <Link
-            to="/install-pwa"
-            className="text-xs font-medium text-slate-600 hover:text-emerald-700 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-emerald-300 transition"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-600" />
-            Install App
-          </Link>
+          {/* PWA Install Button */}
+          {!isStandalone && (
+            <button
+              onClick={openInstallFlow}
+              type="button"
+              className="text-xs font-medium text-slate-600 hover:text-emerald-700 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-emerald-300 transition"
+              title="Install VFlow Web App"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Install App</span>
+            </button>
+          )}
 
           {/* Role-based dashboard button */}
           {role === 'provider' ? (
@@ -218,13 +224,17 @@ export const Navbar: React.FC = () => {
 
         {/* Mobile Hamburger Button */}
         <div className="flex items-center gap-2 lg:hidden">
-          <Link
-            to="/install-pwa"
-            className="p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg"
-            title="Install App"
-          >
-            <Download className="w-5 h-5" />
-          </Link>
+          {!isStandalone && (
+            <button
+              onClick={openInstallFlow}
+              type="button"
+              className="p-2 text-emerald-700 hover:bg-emerald-50 rounded-lg transition"
+              title="Install VFlow App"
+              aria-label="Install VFlow App"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          )}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition"
@@ -315,6 +325,24 @@ export const Navbar: React.FC = () => {
                 <Shield className="w-5 h-5 text-emerald-400" />
                 Admin Console
               </Link>
+            )}
+            {!isStandalone && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openInstallFlow();
+                }}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-emerald-50 text-emerald-800 text-sm font-semibold text-left transition hover:bg-emerald-100"
+              >
+                <div className="flex items-center gap-3">
+                  <Download className="w-5 h-5 text-emerald-600" />
+                  <span>Install VFlow App</span>
+                </div>
+                <span className="text-[10px] font-bold uppercase bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded-full">
+                  PWA
+                </span>
+              </button>
             )}
           </div>
 

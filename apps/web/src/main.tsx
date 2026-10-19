@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { registerSW } from 'virtual:pwa-register';
 
 import { AuthProvider } from './context/AuthContext';
+import { PWAProvider } from './context/PWAContext';
 import { App } from './App';
 import './index.css';
 
@@ -37,7 +38,9 @@ ReactDOM.createRoot(rootElement).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <App />
+          <PWAProvider>
+            <App />
+          </PWAProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

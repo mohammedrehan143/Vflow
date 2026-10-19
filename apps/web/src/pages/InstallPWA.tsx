@@ -11,36 +11,27 @@ import {
   WifiOff,
 } from 'lucide-react';
 
+import { usePWA } from '../context/PWAContext';
+
 export const InstallPWA: React.FC = () => {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstalled, setIsInstalled] = useState<boolean>(false);
-
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-
-    window.addEventListener('beforeinstallprompt', handler);
-
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
-    }
-
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+  const {
+    isInstallable,
+    isInstalled,
+    isStandalone,
+    promptInstall,
+    isIOS,
+  } = usePWA();
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) {
-      alert('To install VFlow, please use your browser menu (e.g. "Add to Home Screen" or the install icon in the URL bar).');
-      return;
+    if (isInstallable) {
+      await promptInstall();
+    } else {
+      // Scroll down to instructions section
+      const el = document.getElementById('instructions-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
-    }
-    setDeferredPrompt(null);
   };
 
   return (
@@ -109,7 +100,7 @@ export const InstallPWA: React.FC = () => {
       </div>
 
       {/* Step-by-Step Installation Instructions by Device (Section 16) */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
+      <div id="instructions-section" className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
         <h2 className="text-xl font-bold text-slate-900">Installation Instructions by Browser</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">

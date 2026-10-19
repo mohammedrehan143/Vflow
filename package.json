@@ -1,0 +1,33 @@
+{
+  "name": "vflow-monorepo",
+  "version": "1.0.0",
+  "description": "VFlow - Marketplace for Parking Spaces and EV Charging Infrastructure",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev": "npm run dev --workspaces --parallel",
+    "dev:api": "npm run dev --workspace=@vflow/api",
+    "dev:web": "npm run dev --workspace=@vflow/web",
+    "seed": "npm run seed --workspace=@vflow/api"
+  },
+  "keywords": [
+    "parking",
+    "ev-charging",
+    "marketplace",
+    "pwa",
+    "next-day-payouts",
+    "razorpay"
+  ],
+  "author": "VFlow Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.7.2"
+  }
+}

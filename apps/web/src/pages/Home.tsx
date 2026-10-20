@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -40,6 +40,8 @@ import {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const exploreAsGuest = searchParams.get('explore') === 'guest';
   const { user, isAuthenticated, loginWithOtp, quickDemoLogin, logout } = useAuth();
 
   // Onboarding Stage for new/unauthenticated users:
@@ -52,7 +54,6 @@ export const Home: React.FC = () => {
   const [otpDigits, setOtpDigits] = useState(['', '', '']);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
-  const [exploreAsGuest, setExploreAsGuest] = useState(false);
 
   // OTP input refs for auto-focusing
   const otpInputRefs = [
@@ -365,7 +366,7 @@ export const Home: React.FC = () => {
   // =========================================================================
   if (!isAuthenticated && !exploreAsGuest) {
     return (
-      <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-between selection:bg-yellow-400 selection:text-black">
+      <div className="fixed inset-0 z-50 bg-white text-neutral-900 flex flex-col justify-between selection:bg-yellow-400 selection:text-black overflow-y-auto">
         {/* Top Header Bar */}
         <header className="px-6 pt-6 pb-2 flex items-center justify-between max-w-md mx-auto w-full">
           {onboardingStage !== 'slides' ? (
@@ -389,7 +390,7 @@ export const Home: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setExploreAsGuest(true)}
+            onClick={() => setSearchParams({ explore: 'guest' })}
             className="text-xs font-bold text-neutral-500 hover:text-black transition"
           >
             Skip
@@ -643,7 +644,7 @@ export const Home: React.FC = () => {
           <div className="flex items-center gap-2">
             {!isAuthenticated ? (
               <button
-                onClick={() => setExploreAsGuest(false)}
+                onClick={() => setSearchParams({})}
                 className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs rounded-xl shadow-xs transition"
               >
                 Sign In / Verify OTP

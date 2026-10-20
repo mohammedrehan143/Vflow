@@ -1,5 +1,6 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { InstallPromptPopup } from './components/common/InstallPromptPopup';
@@ -34,9 +35,21 @@ import {
 } from './pages/StaticPages';
 
 export const App: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // The starting page (onboarding walkthrough & login) is full screen without Navbar, Footer, or BottomNavbar
+  const searchParams = new URLSearchParams(location.search);
+  const isGuestExplore = searchParams.get('explore') === 'guest';
+  const isStartingPage = location.pathname === '/' && !isAuthenticated && !isGuestExplore;
+
   return (
-    <div className="flex flex-col min-h-screen bg-white text-neutral-900 selection:bg-yellow-400 selection:text-black pb-16">
-      <Navbar />
+    <div
+      className={`flex flex-col min-h-screen bg-white text-neutral-900 selection:bg-yellow-400 selection:text-black ${
+        isStartingPage ? '' : 'pb-16'
+      }`}
+    >
+      {!isStartingPage && <Navbar />}
 
       <main className="flex-1 bg-white">
         <Routes>
@@ -102,9 +115,10 @@ export const App: React.FC = () => {
         </Routes>
       </main>
 
-      <Footer />
+      {/* Footer is only visible once the user is logged in */}
+      {isAuthenticated && <Footer />}
       <InstallPromptPopup />
-      <BottomNavbar />
+      {!isStartingPage && <BottomNavbar />}
     </div>
   );
 };

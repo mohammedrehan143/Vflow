@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePWA } from '../../context/PWAContext';
 import {
@@ -17,62 +17,15 @@ import {
 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { user, role, logout, quickDemoLogin } = useAuth();
+  const { user, role, logout } = useAuth();
   const { openInstallFlow, isStandalone } = usePWA();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-neutral-200 text-neutral-900 shadow-xs">
-      {/* Top Demo Quick Switcher Banner */}
-      <div className="bg-neutral-50 text-neutral-700 text-xs px-4 py-1.5 flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></span>
-          <span className="font-semibold text-neutral-800">VFlow Live Marketplace</span>
-          <span className="text-neutral-300 hidden sm:inline">|</span>
-          <span className="text-neutral-500 hidden sm:inline">Role:</span>
-          <span className="font-black text-neutral-900 uppercase tracking-wider bg-yellow-300/60 px-1.5 py-0.5 rounded">
-            {role ? role : 'Guest Driver'}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-neutral-500 hidden md:inline text-[11px] font-medium">Quick Switch:</span>
-          <button
-            onClick={() => quickDemoLogin('customer')}
-            className={`px-2.5 py-0.5 rounded text-xs transition font-extrabold ${
-              role === 'customer'
-                ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                : 'bg-white hover:bg-neutral-100 text-neutral-700 border border-neutral-300'
-            }`}
-          >
-            Driver
-          </button>
-          <button
-            onClick={() => quickDemoLogin('provider')}
-            className={`px-2.5 py-0.5 rounded text-xs transition font-extrabold ${
-              role === 'provider'
-                ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                : 'bg-white hover:bg-neutral-100 text-neutral-700 border border-neutral-300'
-            }`}
-          >
-            Host
-          </button>
-          <button
-            onClick={() => quickDemoLogin('admin')}
-            className={`px-2.5 py-0.5 rounded text-xs transition font-extrabold ${
-              role === 'admin'
-                ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                : 'bg-white hover:bg-neutral-100 text-neutral-700 border border-neutral-300'
-            }`}
-          >
-            Admin
-          </button>
-        </div>
-      </div>
-
       {/* Main Navigation Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand Logo */}

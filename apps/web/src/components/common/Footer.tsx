@@ -1,52 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, ShieldCheck, CreditCard, Sparkles, Smartphone, Mail, Phone } from 'lucide-react';
+import { Zap, Smartphone, Mail, Phone } from 'lucide-react';
 import { PLATFORM_CONFIG } from '@vflow/shared';
 
 export const Footer: React.FC = () => {
   return (
     <footer className="bg-neutral-50 text-neutral-600 border-t border-neutral-200 text-sm">
-      {/* Trust & Guarantee Highlights Bar */}
-      <div className="border-b border-neutral-200 py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-neutral-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center shrink-0 shadow-xs">
-              <CreditCard className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <h4 className="text-neutral-900 font-black text-sm">Next-Day Host Settlements</h4>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                Eligible net earnings for completed parking & charging sessions are settled next calendar day.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-neutral-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-black text-yellow-400 flex items-center justify-center shrink-0 shadow-xs">
-              <ShieldCheck className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <h4 className="text-neutral-900 font-black text-sm">Razorpay Secure Checkout</h4>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                Bank-grade 256-bit encryption with instantaneous HMAC signature verification and webhooks.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-start gap-3.5 bg-white p-4 rounded-2xl border border-neutral-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-yellow-400 text-black flex items-center justify-center shrink-0 shadow-xs">
-              <Sparkles className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <div>
-              <h4 className="text-neutral-900 font-black text-sm">Destination Engine Included</h4>
-              <p className="text-xs text-neutral-600 mt-0.5">
-                Discover nearby cafes, restaurants, and shopping spots while your vehicle is parked or charging.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Links Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
         <div className="col-span-2">

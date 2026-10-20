@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { ListingCard } from '../components/listings/ListingCard';
+import { ListingMap } from '../components/maps/ListingMap';
 import {
   Car,
   Zap,
@@ -23,12 +24,13 @@ import {
   BookmarkCheck,
   Compass,
   BatteryCharging,
-  Layers,
-  FileText,
   AlertCircle,
   HelpCircle,
   Coffee,
   Check,
+  ArrowLeft,
+  KeyRound,
+  RotateCcw,
 } from 'lucide-react';
 import {
   IVehicle,
@@ -38,72 +40,58 @@ import {
 
 export const Home: React.FC = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, login, register, quickDemoLogin } = useAuth();
+  const { user, isAuthenticated, loginWithOtp, quickDemoLogin, logout } = useAuth();
 
-  // Mobile Carousel State (Phone layout: 4 slides)
-  const [mobileSlide, setMobileSlide] = useState<number>(0);
+  // Onboarding Stage for new/unauthenticated users:
+  // 'slides' -> 4-slide walkthrough (image copy 2 style)
+  // 'phone' -> "Hello There 👋" phone number input (image style)
+  // 'otp' -> 3-digit OTP verification ("123")
+  const [onboardingStage, setOnboardingStage] = useState<'slides' | 'phone' | 'otp'>('slides');
+  const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otpDigits, setOtpDigits] = useState(['', '', '']);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [exploreAsGuest, setExploreAsGuest] = useState(false);
+
+  // OTP input refs for auto-focusing
+  const otpInputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
+
+  // Touch tracking for swipe gestures
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [isInteracting, setIsInteracting] = useState(false);
-  const [valetWaitlistJoined, setValetWaitlistJoined] = useState(false);
 
-  // Authentication form state (when not logged in)
-  const [authTab, setAuthTab] = useState<'signup' | 'login'>('signup');
-  const [authName, setAuthName] = useState('');
-  const [authPhone, setAuthPhone] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [authRemember, setAuthRemember] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  // Logged-in car configuration form state
+  // Logged-in / Marketplace State
   const [vehicles, setVehicles] = useState<IVehicle[]>([]);
-  const [loadingVehicles, setLoadingVehicles] = useState(false);
-  const [showCarForm, setShowCarForm] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<IVehicle | null>(null);
-
-  // Car form fields
-  const [carType, setCarType] = useState<CustomerVehicleType>('electric_car');
-  const [carModel, setCarModel] = useState('Tata Nexon EV');
-  const [customModel, setCustomModel] = useState('');
-  const [maxAcKw, setMaxAcKw] = useState<string>('7.2');
-  const [maxDcKw, setMaxDcKw] = useState<string>('50');
-  const [selectedConnectors, setSelectedConnectors] = useState<ConnectorType[]>(['CCS2', 'Type 2']);
-  const [licensePlate, setLicensePlate] = useState('');
-  const [savingCar, setSavingCar] = useState(false);
-  const [carSuccessMsg, setCarSuccessMsg] = useState<string | null>(null);
-
-  // Nearby providers search state
   const [serviceFilter, setServiceFilter] = useState<'all' | 'charging' | 'parking'>('all');
   const [cityFilter, setCityFilter] = useState('Bangalore');
 
-  // Fetch all listings for nearby providers section
+  // Fetch listings for logged-in or guest marketplace
   const { data: listingsData, isLoading: listingsLoading } = useQuery({
-    queryKey: ['nearbyListings', cityFilter, serviceFilter],
+    queryKey: ['marketplaceListings', cityFilter, serviceFilter],
     queryFn: () =>
       api.listings.search({
         city: cityFilter,
         serviceType: serviceFilter === 'all' ? undefined : serviceFilter,
       }),
+    enabled: isAuthenticated || exploreAsGuest,
   });
 
-  // Fetch vehicles if logged in
   const fetchUserVehicles = async () => {
-    setLoadingVehicles(true);
     try {
       const res = await api.vehicles.list();
       if (res.success && res.vehicles) {
         setVehicles(res.vehicles);
         const def = res.vehicles.find((v) => v.isDefault) || res.vehicles[0] || null;
         setSelectedVehicle(def);
-        if (!def && res.vehicles.length === 0) {
-          setShowCarForm(true);
-        }
       }
     } catch (e) {
       console.error(e);
-    } finally {
-      setLoadingVehicles(false);
     }
   };
 
@@ -113,18 +101,9 @@ export const Home: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  // Mobile carousel auto-advance timer (pauses when interacting or on slide 3 auth form)
-  useEffect(() => {
-    if (isInteracting || mobileSlide === 3) return;
-    const interval = setInterval(() => {
-      setMobileSlide((prev) => (prev + 1) % 4);
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [isInteracting, mobileSlide]);
-
+  // Touch handlers for walkthrough slides
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
-    setIsInteracting(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -134,1281 +113,642 @@ export const Home: React.FC = () => {
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    if (isLeftSwipe) {
-      setMobileSlide((prev) => (prev + 1) % 4);
-    } else if (isRightSwipe) {
-      setMobileSlide((prev) => (prev - 1 + 4) % 4);
+    if (distance > 50 && currentSlide < 3) {
+      setCurrentSlide((prev) => prev + 1);
+    } else if (distance < -50 && currentSlide > 0) {
+      setCurrentSlide((prev) => prev - 1);
     }
     setTouchStart(null);
     setTouchEnd(null);
-    setTimeout(() => setIsInteracting(false), 3000);
   };
 
-  const handleAuthSubmit = async (e: React.FormEvent) => {
+  // Submit Phone Number -> Move to OTP Step
+  const handlePhoneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthLoading(true);
-    setAuthError(null);
+    const clean = phoneNumber.replace(/\D/g, '');
+    if (clean.length < 10) {
+      alert('Please enter a valid 10-digit mobile number.');
+      return;
+    }
+    setOtpError(null);
+    setOtpDigits(['', '', '']);
+    setOnboardingStage('otp');
+    setTimeout(() => {
+      otpInputRefs[0].current?.focus();
+    }, 100);
+  };
 
+  // Handle OTP digit entry
+  const handleOtpChange = (index: number, val: string) => {
+    const digit = val.replace(/\D/g, '').slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+    setOtpError(null);
+
+    // Auto-advance focus to next input
+    if (digit && index < 2) {
+      otpInputRefs[index + 1].current?.focus();
+    }
+
+    // If 3 digits are entered, auto-verify
+    if (digit && index === 2 && newDigits[0] && newDigits[1]) {
+      const fullOtp = `${newDigits[0]}${newDigits[1]}${digit}`;
+      verifyEnteredOtp(fullOtp);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs[index - 1].current?.focus();
+    }
+  };
+
+  // Verify OTP (hardcoded to '123')
+  const verifyEnteredOtp = async (codeToVerify?: string) => {
+    const code = codeToVerify || otpDigits.join('');
+    if (code !== '123') {
+      setOtpError('Invalid OTP. Please enter 123');
+      return;
+    }
+
+    setAuthLoading(true);
+    setOtpError(null);
     try {
-      if (authTab === 'signup') {
-        const dummyEmail = `${authPhone.replace(/\D/g, '')}@vflow-demo.in`;
-        await register({
-          fullName: authName.trim(),
-          phone: authPhone.trim(),
-          email: dummyEmail,
-          password: authPassword,
-          role: 'customer',
-        });
-      } else {
-        await login({
-          identifier: authPhone.trim(),
-          password: authPassword,
-          remember: authRemember,
-        });
-      }
+      await loginWithOtp(phoneNumber, '123');
       await fetchUserVehicles();
     } catch (err: any) {
-      setAuthError(err.message || 'Authentication failed. Please verify credentials.');
+      setOtpError(err.message || 'Verification failed. Please retry.');
     } finally {
       setAuthLoading(false);
     }
   };
 
-  const handleSaveCar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingCar(true);
-    setCarSuccessMsg(null);
+  // Walkthrough Slides Content
+  const walkthroughSlides = [
+    {
+      id: 0,
+      titleLine1: 'Turning your space into a',
+      titleLine2: 'charging spot',
+      highlightColor: 'text-emerald-700',
+      pill: '1/4',
+      badge: '⚡ EV Fast Charging',
+      renderIllustration: () => (
+        <svg viewBox="0 0 400 280" className="w-full max-w-sm h-64 mx-auto" fill="none">
+          {/* House background sketch */}
+          <path d="M70 230 L70 120 L200 40 L330 120 L330 230 Z" stroke="#E2E8F0" strokeWidth="2.5" fill="#F8FAFC" />
+          <path d="M190 40 L190 20 L230 20 L230 65" stroke="#CBD5E1" strokeWidth="2" fill="none" />
+          <line x1="50" y1="230" x2="350" y2="230" stroke="#CBD5E1" strokeWidth="3" />
+          {/* Windows and doors */}
+          <rect x="95" y="140" width="45" height="50" rx="4" stroke="#CBD5E1" strokeWidth="2" fill="#FFFFFF" />
+          <rect x="260" y="140" width="45" height="50" rx="4" stroke="#CBD5E1" strokeWidth="2" fill="#FFFFFF" />
+          <line x1="95" y1="165" x2="140" y2="165" stroke="#CBD5E1" strokeWidth="1.5" />
+          <line x1="117" y1="140" x2="117" y2="190" stroke="#CBD5E1" strokeWidth="1.5" />
 
-    const actualModel = carModel === 'Other' ? customModel.trim() : carModel;
-    if (!actualModel) {
-      alert('Please enter your vehicle model');
-      setSavingCar(false);
-      return;
-    }
+          {/* EV Wallbox Charger on house wall */}
+          <rect x="290" y="130" width="28" height="42" rx="6" fill="#10B981" stroke="#059669" strokeWidth="2" />
+          <path d="M304 140 L298 152 L303 152 L301 162 L309 149 L304 149 Z" fill="#FFFFFF" />
+          {/* Cable from wallbox to car */}
+          <path d="M296 172 C 290 200, 260 210, 240 195" stroke="#0F172A" strokeWidth="3.5" fill="none" strokeLinecap="round" />
 
-    try {
-      const res = await api.vehicles.create({
-        vehicleType: carType,
-        powertrain: carType.includes('electric') ? 'electric' : carType.includes('hybrid') ? 'hybrid' : 'petrol',
-        manufacturer: actualModel.split(' ')[0] || 'Generic',
-        model: actualModel,
-        registrationNumber: licensePlate.trim().toUpperCase() || undefined,
-        supportedConnectorTypes: selectedConnectors,
-        maxAcPowerKw: parseFloat(maxAcKw) || 7.2,
-        maxDcPowerKw: parseFloat(maxDcKw) || 50,
-        isDefault: true,
-      });
+          {/* Electric Car */}
+          <g transform="translate(60, 130)">
+            {/* Car body */}
+            <path
+              d="M30 60 C 45 40, 75 30, 110 30 L 140 30 C 175 30, 195 45, 210 60 L 225 65 C 235 70, 235 85, 225 85 L 15 85 C 5 85, 5 70, 15 65 Z"
+              fill="#1E40AF"
+            />
+            {/* Car roof & cabin */}
+            <path d="M60 40 L 95 10 L 155 10 L 185 40 Z" fill="#60A5FA" opacity="0.9" />
+            <line x1="125" y1="10" x2="125" y2="40" stroke="#1E40AF" strokeWidth="2" />
+            {/* Headlight & taillight */}
+            <path d="M220 66 Q 228 72 220 78 Z" fill="#FACC15" />
+            <path d="M16 66 Q 10 72 16 78 Z" fill="#EF4444" />
+            {/* Wheels */}
+            <circle cx="65" cy="85" r="18" fill="#0F172A" />
+            <circle cx="65" cy="85" r="8" fill="#E2E8F0" />
+            <circle cx="175" cy="85" r="18" fill="#0F172A" />
+            <circle cx="175" cy="85" r="8" fill="#E2E8F0" />
+          </g>
+        </svg>
+      ),
+    },
+    {
+      id: 1,
+      titleLine1: 'Zero street circling, guaranteed',
+      titleLine2: 'parking bay',
+      highlightColor: 'text-neutral-900',
+      pill: '2/4',
+      badge: '🅿️ Guaranteed Parking',
+      renderIllustration: () => (
+        <svg viewBox="0 0 400 280" className="w-full max-w-sm h-64 mx-auto" fill="none">
+          {/* Parking structure backdrop */}
+          <rect x="60" y="50" width="280" height="180" rx="16" fill="#F8FAFC" stroke="#E2E8F0" strokeWidth="2.5" />
+          <line x1="60" y1="230" x2="340" y2="230" stroke="#0F172A" strokeWidth="4" />
+          {/* Parking Bay Markings */}
+          <line x1="100" y1="230" x2="100" y2="130" stroke="#FACC15" strokeWidth="4" strokeDasharray="8 6" />
+          <line x1="300" y1="230" x2="300" y2="130" stroke="#FACC15" strokeWidth="4" strokeDasharray="8 6" />
+          {/* Digital Access Barrier Pillar */}
+          <rect x="75" y="110" width="22" height="120" rx="4" fill="#0F172A" />
+          <circle cx="86" cy="130" r="5" fill="#10B981" className="animate-pulse" />
+          <rect x="80" y="145" width="12" height="16" rx="2" fill="#334155" />
+          {/* Boom barrier arm */}
+          <path d="M86 125 L 210 90" stroke="#EF4444" strokeWidth="6" strokeLinecap="round" strokeDasharray="16 12" />
 
-      if (res.success && res.vehicle) {
-        setCarSuccessMsg(`✓ Successfully configured ${actualModel}! Showing compatible stations below.`);
-        setSelectedVehicle(res.vehicle);
-        setShowCarForm(false);
-        await fetchUserVehicles();
-      }
-    } catch (err: any) {
-      alert(err.message || 'Failed to save vehicle details');
-    } finally {
-      setSavingCar(false);
-    }
-  };
+          {/* Reserved Parking Sign Badge */}
+          <rect x="170" y="65" width="60" height="40" rx="8" fill="#0F172A" stroke="#FACC15" strokeWidth="2" />
+          <text x="200" y="92" textAnchor="middle" fill="#FACC15" fontSize="22" fontWeight="900" fontFamily="sans-serif">
+            🅿️
+          </text>
 
-  const toggleConnector = (connector: ConnectorType) => {
-    setSelectedConnectors((prev) =>
-      prev.includes(connector) ? prev.filter((c) => c !== connector) : [...prev, connector]
-    );
-  };
+          {/* Parked Vehicle */}
+          <g transform="translate(100, 140)">
+            <path
+              d="M25 55 C 38 35, 65 25, 100 25 L 125 25 C 160 25, 180 38, 195 55 L 205 60 C 215 65, 215 80, 205 80 L 15 80 C 5 80, 5 65, 15 60 Z"
+              fill="#0F172A"
+            />
+            <path d="M50 35 L 80 10 L 140 10 L 170 35 Z" fill="#CBD5E1" opacity="0.8" />
+            <circle cx="55" cy="80" r="16" fill="#1E293B" />
+            <circle cx="55" cy="80" r="7" fill="#F8FAFC" />
+            <circle cx="165" cy="80" r="16" fill="#1E293B" />
+            <circle cx="165" cy="80" r="7" fill="#F8FAFC" />
+          </g>
+        </svg>
+      ),
+    },
+    {
+      id: 2,
+      titleLine1: 'Curbside luxury drop-off with',
+      titleLine2: 'priority valet',
+      highlightColor: 'text-amber-600',
+      pill: '3/4',
+      badge: '✨ Curbside Valet Drop-off',
+      renderIllustration: () => (
+        <svg viewBox="0 0 400 280" className="w-full max-w-sm h-64 mx-auto" fill="none">
+          {/* Airport / Luxury Mall Canopy */}
+          <path d="M50 70 L 350 70 L 330 95 L 70 95 Z" fill="#0F172A" />
+          <line x1="80" y1="95" x2="80" y2="230" stroke="#94A3B8" strokeWidth="5" />
+          <line x1="320" y1="95" x2="320" y2="230" stroke="#94A3B8" strokeWidth="5" />
+          <line x1="40" y1="230" x2="360" y2="230" stroke="#CBD5E1" strokeWidth="3" />
 
-  return (
-    <div className="min-h-screen bg-white text-neutral-900 space-y-12 sm:space-y-16 pb-24 selection:bg-yellow-400 selection:text-black">
-      {/* =========================================================================
-          MOBILE PHONE LAYOUT 4-SLIDE ONBOARDING CAROUSEL
-          (Visible on mobile/phone screens: lg:hidden)
-          Slide 1: EV Fast Charging
-          Slide 2: Reserved Parking
-          Slide 3: Valet Parking
-          Slide 4: Nearby Hangout Spots + Login / Signup Option
-          ========================================================================= */}
-      <section className="block lg:hidden px-3 pt-3">
-        <div className="bg-white border-2 border-neutral-900 rounded-3xl overflow-hidden shadow-xl">
-          {/* Top Quick-Jump Indicator Tabs */}
-          <div className="grid grid-cols-4 border-b border-neutral-200 bg-neutral-50 text-[10px] font-black uppercase text-center">
+          {/* Valet Stand Podium */}
+          <rect x="250" y="140" width="36" height="70" rx="6" fill="#FACC15" stroke="#EAB308" strokeWidth="2" />
+          <rect x="245" y="132" width="46" height="12" rx="4" fill="#0F172A" />
+          <text x="268" y="175" textAnchor="middle" fill="#0F172A" fontSize="10" fontWeight="900" fontFamily="sans-serif">
+            VALET
+          </text>
+
+          {/* Key handover icon badge */}
+          <circle cx="268" cy="110" r="18" fill="#0F172A" />
+          <path d="M263 110 L 273 110 M273 110 L 273 115 M270 110 L 270 114" stroke="#FACC15" strokeWidth="2.5" strokeLinecap="round" />
+          <circle cx="261" cy="110" r="4" stroke="#FACC15" strokeWidth="2.5" />
+
+          {/* Premium Luxury Vehicle */}
+          <g transform="translate(60, 140)">
+            <path
+              d="M20 50 C 35 30, 60 20, 95 20 L 125 20 C 160 20, 180 32, 195 50 L 205 55 C 215 60, 215 75, 205 75 L 12 75 C 2 75, 2 60, 12 55 Z"
+              fill="#334155"
+            />
+            <path d="M45 30 L 75 8 L 135 8 L 165 30 Z" fill="#94A3B8" opacity="0.6" />
+            <circle cx="50" cy="75" r="16" fill="#0F172A" />
+            <circle cx="50" cy="75" r="7" fill="#FACC15" />
+            <circle cx="160" cy="75" r="16" fill="#0F172A" />
+            <circle cx="160" cy="75" r="7" fill="#FACC15" />
+          </g>
+        </svg>
+      ),
+    },
+    {
+      id: 3,
+      titleLine1: 'Relax while you charge at',
+      titleLine2: 'nearby hangout spots',
+      highlightColor: 'text-amber-800',
+      pill: '4/4',
+      badge: '☕ Charge & Chill',
+      renderIllustration: () => (
+        <svg viewBox="0 0 400 280" className="w-full max-w-sm h-64 mx-auto" fill="none">
+          {/* Cafe terrace & table */}
+          <circle cx="200" cy="230" r="130" fill="#FEF3C7" opacity="0.4" />
+          {/* Coffee Table */}
+          <ellipse cx="200" cy="180" rx="75" ry="25" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="3" />
+          <rect x="195" y="180" width="10" height="50" rx="3" fill="#64748B" />
+          <ellipse cx="200" cy="230" rx="40" ry="10" fill="#CBD5E1" />
+
+          {/* Giant steaming artisan coffee cup */}
+          <rect x="175" y="130" width="45" height="40" rx="8" fill="#FACC15" stroke="#0F172A" strokeWidth="2.5" />
+          <path d="M220 140 C 235 140, 235 160, 220 160" stroke="#0F172A" strokeWidth="3" fill="none" />
+          {/* Coffee steam curves */}
+          <path d="M185 120 C 182 110, 188 102, 185 92" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M198 120 C 195 108, 202 100, 198 88" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M210 120 C 207 110, 213 102, 210 92" stroke="#D97706" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+
+          {/* Location Pin & 300m badge */}
+          <g transform="translate(110, 80)">
+            <circle cx="20" cy="20" r="18" fill="#0F172A" />
+            <path d="M20 10 L 20 25 M15 15 L 25 15" stroke="#FACC15" strokeWidth="2" strokeLinecap="round" />
+            <rect x="-10" y="42" width="60" height="20" rx="10" fill="#0F172A" />
+            <text x="20" y="56" textAnchor="middle" fill="#FFFFFF" fontSize="9" fontWeight="900" fontFamily="sans-serif">
+              300m away
+            </text>
+          </g>
+        </svg>
+      ),
+    },
+  ];
+
+  // =========================================================================
+  // VIEW 1: UNREGISTERED / NEW USER ONBOARDING
+  // Matches user requested images:
+  // - Walkthrough slides with pill indicator (image copy 2)
+  // - "Hello There 👋" phone number input (image)
+  // - 3-digit OTP verification ("123")
+  // =========================================================================
+  if (!isAuthenticated && !exploreAsGuest) {
+    return (
+      <div className="min-h-screen bg-white text-neutral-900 flex flex-col justify-between selection:bg-yellow-400 selection:text-black">
+        {/* Top Header Bar */}
+        <header className="px-6 pt-6 pb-2 flex items-center justify-between max-w-md mx-auto w-full">
+          {onboardingStage !== 'slides' ? (
             <button
               onClick={() => {
-                setMobileSlide(0);
-                setIsInteracting(true);
+                if (onboardingStage === 'otp') setOnboardingStage('phone');
+                else setOnboardingStage('slides');
               }}
-              className={`py-2 px-1 transition border-b-2 flex flex-col items-center gap-0.5 ${
-                mobileSlide === 0
-                  ? 'border-yellow-400 bg-white text-black font-extrabold'
-                  : 'border-transparent text-neutral-500 hover:text-black'
-              }`}
+              className="p-2 -ml-2 text-neutral-800 hover:text-black rounded-full hover:bg-neutral-100 transition"
+              title="Go Back"
             >
-              <span>⚡</span>
-              <span className="truncate">Charging</span>
+              <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
             </button>
-            <button
-              onClick={() => {
-                setMobileSlide(1);
-                setIsInteracting(true);
-              }}
-              className={`py-2 px-1 transition border-b-2 flex flex-col items-center gap-0.5 ${
-                mobileSlide === 1
-                  ? 'border-yellow-400 bg-white text-black font-extrabold'
-                  : 'border-transparent text-neutral-500 hover:text-black'
-              }`}
-            >
-              <span>🅿️</span>
-              <span className="truncate">Parking</span>
-            </button>
-            <button
-              onClick={() => {
-                setMobileSlide(2);
-                setIsInteracting(true);
-              }}
-              className={`py-2 px-1 transition border-b-2 flex flex-col items-center gap-0.5 ${
-                mobileSlide === 2
-                  ? 'border-yellow-400 bg-white text-black font-extrabold'
-                  : 'border-transparent text-neutral-500 hover:text-black'
-              }`}
-            >
-              <span>✨</span>
-              <span className="truncate">Valet</span>
-            </button>
-            <button
-              onClick={() => {
-                setMobileSlide(3);
-                setIsInteracting(true);
-              }}
-              className={`py-2 px-1 transition border-b-2 flex flex-col items-center gap-0.5 ${
-                mobileSlide === 3
-                  ? 'border-yellow-400 bg-white text-black font-extrabold'
-                  : 'border-transparent text-neutral-500 hover:text-black'
-              }`}
-            >
-              <span>☕</span>
-              <span className="truncate">{isAuthenticated ? 'Account' : 'Sign In'}</span>
-            </button>
+          ) : (
+            <div className="w-5" />
+          )}
+
+          <div className="flex items-center gap-1.5 font-black text-sm tracking-tight text-neutral-900">
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 border border-black inline-block"></span>
+            <span>VFLOW</span>
           </div>
 
-          {/* Swipeable Carousel Container */}
+          <button
+            onClick={() => setExploreAsGuest(true)}
+            className="text-xs font-bold text-neutral-500 hover:text-black transition"
+          >
+            Skip
+          </button>
+        </header>
+
+        {/* ================= STAGE 1: 4-SLIDE WALKTHROUGH (image copy 2) ================= */}
+        {onboardingStage === 'slides' && (
           <div
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            className="relative min-h-[460px] overflow-hidden"
+            className="flex-1 flex flex-col justify-between px-6 py-6 max-w-md mx-auto w-full animate-in fade-in duration-300"
           >
-            {/* ---------------- SLIDE 1: EV FAST CHARGING ---------------- */}
-            {mobileSlide === 0 && (
-              <div className="p-4 flex flex-col justify-between h-full space-y-4 animate-in fade-in duration-300">
-                <div className="relative rounded-2xl overflow-hidden h-48 bg-neutral-900 border border-neutral-200 shadow-inner">
-                  <img
-                    src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=1000&auto=format&fit=crop&q=80"
-                    alt="EV Fast Charging Hub"
-                    className="w-full h-full object-cover opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-3.5 text-white">
-                    <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider inline-block w-fit mb-1 shadow-xs">
-                      ⚡ Slide 1 of 4: Fast Charging
-                    </span>
-                    <h3 className="text-xl font-black text-white leading-tight">
-                      High-Speed EV Fast Charging
-                    </h3>
-                  </div>
-                </div>
+            {/* Top Text Header */}
+            <div className="text-center pt-2 space-y-1">
+              <p className="text-lg sm:text-xl font-bold text-neutral-700 tracking-tight">
+                {walkthroughSlides[currentSlide].titleLine1}
+              </p>
+              <h2 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight leading-tight">
+                <span className="bg-yellow-400 text-black px-2.5 py-0.5 rounded-xl inline-block shadow-xs">
+                  {walkthroughSlides[currentSlide].titleLine2}
+                </span>
+              </h2>
+            </div>
 
-                <div className="space-y-3">
-                  <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                    Reserve certified fast chargers from 3.3 kW AC wallboxes to 150 kW DC rapid hubs. Live gun status, compatible connector filters, and zero idle penalty surprises.
-                  </p>
+            {/* Center Vector Illustration */}
+            <div className="my-auto py-4 flex items-center justify-center">
+              {walkthroughSlides[currentSlide].renderIllustration()}
+            </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">150 kW</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">DC Fast</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">CCS2 / T2</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Plugs</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">100%</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Live Status</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <Link
-                    to="/find-charging"
-                    className="flex-1 py-3 px-4 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black rounded-xl text-center shadow-xs transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-1.5"
-                  >
-                    <span>Find Fast Chargers</span>
-                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </Link>
-                  <button
-                    onClick={() => setMobileSlide(1)}
-                    className="py-3 px-3.5 bg-black text-yellow-400 text-xs font-black rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+            {/* Lower Controls: Count Pill & Full Width Action Button */}
+            <div className="space-y-6 pb-6">
+              {/* Pill Indicator (e.g. 1/4, 2/4, 3/4, 4/4) */}
+              <div className="flex justify-center">
+                <div className="px-4 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-neutral-800 text-xs font-black shadow-xs">
+                  {walkthroughSlides[currentSlide].pill}
                 </div>
               </div>
-            )}
 
-            {/* ---------------- SLIDE 2: RESERVED PARKING ---------------- */}
-            {mobileSlide === 1 && (
-              <div className="p-4 flex flex-col justify-between h-full space-y-4 animate-in fade-in duration-300">
-                <div className="relative rounded-2xl overflow-hidden h-48 bg-neutral-900 border border-neutral-200 shadow-inner">
-                  <img
-                    src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=1000&auto=format&fit=crop&q=80"
-                    alt="Reserved Parking Bays"
-                    className="w-full h-full object-cover opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-3.5 text-white">
-                    <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider inline-block w-fit mb-1 shadow-xs">
-                      🅿️ Slide 2 of 4: Reserved Parking
-                    </span>
-                    <h3 className="text-xl font-black text-white leading-tight">
-                      Zero-Circling Parking Bays
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                    Stop circling crowded city streets. Pre-book private parking spaces in apartment stilts, corporate tech parks, and malls with instant digital barrier PIN entry.
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">Covered</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Safe Bays</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">4-Digit PIN</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Barrier Pass</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">Hourly</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Flex Booking</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <Link
-                    to="/find-parking"
-                    className="flex-1 py-3 px-4 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black rounded-xl text-center shadow-xs transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-1.5"
-                  >
-                    <span>Find Parking Spaces</span>
-                    <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                  </Link>
-                  <button
-                    onClick={() => setMobileSlide(2)}
-                    className="py-3 px-3.5 bg-black text-yellow-400 text-xs font-black rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1"
-                  >
-                    <span>Next</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ---------------- SLIDE 3: VALET PARKING ---------------- */}
-            {mobileSlide === 2 && (
-              <div className="p-4 flex flex-col justify-between h-full space-y-4 animate-in fade-in duration-300">
-                <div className="relative rounded-2xl overflow-hidden h-48 bg-neutral-900 border border-neutral-200 shadow-inner">
-                  <img
-                    src="https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?w=1000&auto=format&fit=crop&q=80"
-                    alt="Valet Parking Experience"
-                    className="w-full h-full object-cover opacity-90"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent flex flex-col justify-end p-3.5 text-white">
-                    <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider inline-block w-fit mb-1 shadow-xs">
-                      ✨ Slide 3 of 4: Priority Valet
-                    </span>
-                    <h3 className="text-xl font-black text-white leading-tight">
-                      Curbside Valet Drop-Off
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                    Skip searching entirely. Drop off your vehicle directly at airport terminals, premium shopping malls, and corporate towers with insured and background-checked valet professionals.
-                  </p>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">Curbside</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Terminal Drop</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">100% Insured</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">Vetted Staff</span>
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-center">
-                      <span className="font-black text-xs text-neutral-900 block">Live Status</span>
-                      <span className="text-[9px] text-neutral-500 font-bold uppercase">App Retrieval</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => setValetWaitlistJoined(true)}
-                    className="flex-1 py-3 px-4 bg-black hover:bg-neutral-800 text-yellow-400 text-xs font-black rounded-xl text-center shadow-xs transition active:scale-95 flex items-center justify-center gap-1.5"
-                  >
-                    <span>{valetWaitlistJoined ? '✓ Added to Priority Waitlist!' : 'Join Valet Waitlist'}</span>
-                  </button>
-                  <button
-                    onClick={() => setMobileSlide(3)}
-                    className="py-3 px-3.5 bg-yellow-400 text-black text-xs font-black rounded-xl shadow-xs transition active:scale-95 flex items-center gap-1"
-                  >
-                    <span>Next: Auth</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* ---------------- SLIDE 4: NEARBY HANGOUT SPOTS + DIRECT LOGIN / SIGNUP ---------------- */}
-            {mobileSlide === 3 && (
-              <div className="p-4 space-y-4 animate-in fade-in duration-300">
-                {/* Hangout Header Preview */}
-                <div className="relative rounded-2xl overflow-hidden h-36 bg-neutral-900 border border-neutral-200 shadow-inner">
-                  <img
-                    src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=1000&auto=format&fit=crop&q=80"
-                    alt="Nearby Hangout Spots & Cafes"
-                    className="w-full h-full object-cover opacity-85"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent flex flex-col justify-end p-3 text-white">
-                    <span className="px-2.5 py-0.5 rounded-full bg-yellow-400 text-black text-[10px] font-black uppercase tracking-wider inline-block w-fit mb-1 shadow-xs">
-                      ☕ Slide 4 of 4: Hangouts & Onboarding
-                    </span>
-                    <h3 className="text-lg font-black text-white leading-tight">
-                      Nearby Hangouts + Fast Onboarding
-                    </h3>
-                  </div>
-                </div>
-
-                {/* Direct Login / Signup Form or User Card right on Slide 4 */}
-                {!isAuthenticated ? (
-                  <div className="bg-white rounded-2xl p-4 border border-neutral-300 shadow-sm space-y-3.5">
-                    {/* Tab Switcher */}
-                    <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-xl border border-neutral-200">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthTab('signup');
-                          setAuthError(null);
-                        }}
-                        className={`py-1.5 text-xs font-black rounded-lg transition ${
-                          authTab === 'signup'
-                            ? 'bg-yellow-400 text-black shadow-xs'
-                            : 'text-neutral-600 hover:text-black'
-                        }`}
-                      >
-                        Quick Sign Up
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAuthTab('login');
-                          setAuthError(null);
-                        }}
-                        className={`py-1.5 text-xs font-black rounded-lg transition ${
-                          authTab === 'login'
-                            ? 'bg-yellow-400 text-black shadow-xs'
-                            : 'text-neutral-600 hover:text-black'
-                        }`}
-                      >
-                        Sign In
-                      </button>
-                    </div>
-
-                    {authError && (
-                      <div className="p-2.5 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs flex items-center gap-1.5 font-bold">
-                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{authError}</span>
-                      </div>
-                    )}
-
-                    <form onSubmit={handleAuthSubmit} className="space-y-2.5">
-                      {authTab === 'signup' && (
-                        <div>
-                          <input
-                            type="text"
-                            required
-                            value={authName}
-                            onChange={(e) => setAuthName(e.target.value)}
-                            placeholder="Full Name (e.g. Aditya Sharma)"
-                            className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                          />
-                        </div>
-                      )}
-
-                      <div>
-                        <input
-                          type="text"
-                          required
-                          value={authPhone}
-                          onChange={(e) => setAuthPhone(e.target.value)}
-                          placeholder={authTab === 'signup' ? '10-Digit Mobile Number' : 'Mobile Number or Email'}
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                        />
-                      </div>
-
-                      <div>
-                        <input
-                          type="password"
-                          required
-                          value={authPassword}
-                          onChange={(e) => setAuthPassword(e.target.value)}
-                          placeholder="Password (minimum 6 characters)"
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                        />
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={authLoading}
-                        className="w-full py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-xs border border-yellow-500/20 transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <span>{authLoading ? 'Verifying...' : authTab === 'signup' ? 'Create Account' : 'Sign In Now'}</span>
-                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-                      </button>
-                    </form>
-
-                    {/* Quick Demo Login Pill */}
-                    <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-[11px]">
-                      <span className="text-neutral-500 font-bold">1-Click Demo:</span>
-                      <div className="flex gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => quickDemoLogin('customer')}
-                          className="px-2.5 py-1 bg-black text-yellow-400 rounded-lg font-black text-[10px] active:scale-95"
-                        >
-                          ⚡ Driver Demo
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => quickDemoLogin('provider')}
-                          className="px-2.5 py-1 bg-neutral-100 text-neutral-900 border border-neutral-300 rounded-lg font-black text-[10px] active:scale-95"
-                        >
-                          Host Demo
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* Logged-in State Card on Slide 4 */
-                  <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-yellow-400 text-black flex items-center justify-center font-black">
-                          <Check className="w-4 h-4 stroke-[3]" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-black text-neutral-900">
-                            Logged in as {user?.fullName.split(' ')[0]}
-                          </h4>
-                          <span className="text-[10px] text-neutral-500">
-                            {selectedVehicle ? `${selectedVehicle.model} configured` : 'Ready to reserve'}
-                          </span>
-                        </div>
-                      </div>
-                      <Link
-                        to="/profile"
-                        className="text-[10px] font-black uppercase text-neutral-700 bg-white border border-neutral-300 px-2 py-1 rounded-md"
-                      >
-                        Profile
-                      </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      <Link
-                        to="/find-charging"
-                        className="py-2.5 px-3 bg-yellow-400 text-black text-center text-xs font-black rounded-xl shadow-xs"
-                      >
-                        ⚡ Book Charger
-                      </Link>
-                      <Link
-                        to="/find-parking"
-                        className="py-2.5 px-3 bg-black text-yellow-400 text-center text-xs font-black rounded-xl shadow-xs"
-                      >
-                        🅿️ Book Parking
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Carousel Footer Controls: 4 Indicator Dots & Prev/Next */}
-          <div className="flex items-center justify-between px-4 py-3 bg-neutral-100 border-t border-neutral-200">
-            <button
-              onClick={() => setMobileSlide((prev) => (prev - 1 + 4) % 4)}
-              className="p-1.5 rounded-lg bg-white border border-neutral-300 text-neutral-800 hover:bg-neutral-50 transition active:scale-95"
-              title="Previous slide"
-            >
-              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-            </button>
-
-            {/* 4 Dots indicator */}
-            <div className="flex items-center gap-2">
-              {[0, 1, 2, 3].map((idx) => (
+              {/* Action Button: Next or Get Started */}
+              {currentSlide < 3 ? (
                 <button
-                  key={idx}
-                  onClick={() => {
-                    setMobileSlide(idx);
-                    setIsInteracting(true);
-                  }}
-                  className={`transition-all duration-300 rounded-full ${
-                    mobileSlide === idx
-                      ? 'w-6 h-2 bg-yellow-400 border border-neutral-900'
-                      : 'w-2 h-2 bg-neutral-300 hover:bg-neutral-400'
-                  }`}
-                  title={`Go to slide ${idx + 1}`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={() => setMobileSlide((prev) => (prev + 1) % 4)}
-              className="p-1.5 rounded-lg bg-white border border-neutral-300 text-neutral-800 hover:bg-neutral-50 transition active:scale-95"
-              title="Next slide"
-            >
-              <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-            </button>
-          </div>
-        </div>
-
-        {/* Skip to Marketplace quick pill */}
-        <div className="text-center pt-2">
-          <a
-            href="#nearby-providers-section"
-            className="text-[11px] font-black text-neutral-500 hover:text-black underline underline-offset-4"
-          >
-            Skip preview & browse stations directly ↓
-          </a>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          HERO & ONBOARDING SECTION (DESKTOP / TABLET: hidden on mobile)
-          ========================================================================= */}
-      <section className="hidden lg:block relative overflow-hidden pt-10 sm:pt-16 pb-20 px-4 sm:px-6 lg:px-8 border-b border-neutral-200 bg-neutral-50/60">
-        {/* Yellow ambient background glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full overflow-hidden pointer-events-none opacity-40">
-          <div className="absolute -top-32 left-1/3 w-96 h-96 bg-yellow-300 rounded-full blur-[140px]"></div>
-          <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-yellow-200 rounded-full blur-[140px]"></div>
-        </div>
-
-        <div className="relative max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          {/* Left Column: Brand Message & Pitch */}
-          <div className="lg:col-span-7 space-y-6 text-left">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-yellow-100 border border-yellow-400/60 text-neutral-900 text-xs font-black uppercase tracking-wider shadow-xs">
-              <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 border border-black animate-ping"></span>
-              India's Premier Parking & High-Speed EV Charging Network
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-none text-neutral-900">
-              Find Parking.{' '}
-              <span className="bg-yellow-400 text-black px-2 py-0.5 rounded-lg inline-block my-1 shadow-xs">
-                Fast EV Charging.
-              </span>{' '}
-              <span className="text-neutral-500 text-3xl sm:text-5xl block mt-1 font-extrabold">Explore Nearby.</span>
-            </h1>
-
-            <p className="text-sm sm:text-base text-neutral-600 max-w-xl leading-relaxed font-medium">
-              Reserve guaranteed private parking bays and fast EV chargers in seconds. High-voltage charging from 3.3 kW to 150 kW DC, verified host bays, and instantaneous barrier PIN entry.
-            </p>
-
-            {/* Platform Trust Highlights */}
-            <div className="grid grid-cols-3 gap-3 pt-2">
-              <div className="p-3.5 bg-white border-2 border-neutral-200 rounded-2xl shadow-xs">
-                <div className="text-neutral-900 font-black text-2xl flex items-center gap-1">
-                  <span>100%</span>
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                </div>
-                <div className="text-[11px] text-neutral-500 font-black uppercase tracking-wide">Guaranteed Bays</div>
-              </div>
-              <div className="p-3.5 bg-white border-2 border-neutral-200 rounded-2xl shadow-xs">
-                <div className="text-neutral-900 font-black text-2xl flex items-center gap-1">
-                  <span>150 kW</span>
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                </div>
-                <div className="text-[11px] text-neutral-500 font-black uppercase tracking-wide">DC Fast Charging</div>
-              </div>
-              <div className="p-3.5 bg-white border-2 border-neutral-200 rounded-2xl shadow-xs">
-                <div className="text-neutral-900 font-black text-2xl flex items-center gap-1">
-                  <span>Next-Day</span>
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block"></span>
-                </div>
-                <div className="text-[11px] text-neutral-500 font-black uppercase tracking-wide">Host Settlements</div>
-              </div>
+                  onClick={() => setCurrentSlide((prev) => prev + 1)}
+                  className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-base rounded-2xl shadow-md transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="w-5 h-5 stroke-[3]" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setOnboardingStage('phone')}
+                  className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-base rounded-2xl shadow-md transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight className="w-5 h-5 stroke-[3]" />
+                </button>
+              )}
             </div>
           </div>
+        )}
 
-          {/* Right Column: Dynamic Form (Sign Up / Sign In OR Car Onboarding Prompt) */}
-          <div className="lg:col-span-5">
-            {!isAuthenticated ? (
-              /* ================= GUEST SIGN UP / SIGN IN WIDGET ================= */
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xl space-y-5 text-neutral-900">
-                {/* Tab Switcher */}
-                <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-2xl border border-neutral-200">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthTab('signup');
-                      setAuthError(null);
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl transition ${
-                      authTab === 'signup'
-                        ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/20'
-                        : 'text-neutral-600 hover:text-black'
-                    }`}
-                  >
-                    Quick Sign Up
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthTab('login');
-                      setAuthError(null);
-                    }}
-                    className={`py-2 text-xs font-black rounded-xl transition ${
-                      authTab === 'login'
-                        ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/20'
-                        : 'text-neutral-600 hover:text-black'
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                </div>
+        {/* ================= STAGE 2: PHONE NUMBER SCREEN (image) ================= */}
+        {onboardingStage === 'phone' && (
+          <div className="flex-1 flex flex-col justify-between px-6 py-6 max-w-md mx-auto w-full animate-in fade-in duration-300">
+            <div className="space-y-8 pt-4">
+              {/* Big Bold Greeting */}
+              <h1 className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight text-left">
+                Hello There 👋
+              </h1>
 
+              {/* Phone Input Field */}
+              <form onSubmit={handlePhoneSubmit} id="phone-form" className="space-y-6">
                 <div>
-                  <h3 className="text-lg font-black text-neutral-900">
-                    {authTab === 'signup' ? 'Create Your Account' : 'Welcome Back'}
-                  </h3>
-                  <p className="text-xs text-neutral-500 mt-0.5">
-                    {authTab === 'signup'
-                      ? 'Sign up with your mobile number to unlock instant reservations.'
-                      : 'Sign in to access your saved vehicles and reserved spots.'}
-                  </p>
-                </div>
-
-                {authError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2 font-bold">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{authError}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleAuthSubmit} className="space-y-3.5">
-                  {authTab === 'signup' && (
-                    <div>
-                      <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1">
-                        Full Name
-                      </label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
-                        <input
-                          type="text"
-                          required
-                          value={authName}
-                          onChange={(e) => setAuthName(e.target.value)}
-                          placeholder="e.g. Aditya Sharma"
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl pl-10 pr-3.5 py-2.5 border border-neutral-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition font-semibold"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1">
-                      {authTab === 'signup' ? 'Mobile Number' : 'Mobile Number or Email'}
-                    </label>
-                    <div className="relative">
-                      <Phone className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
-                        required
-                        value={authPhone}
-                        onChange={(e) => setAuthPhone(e.target.value)}
-                        placeholder={authTab === 'signup' ? '10-digit mobile (e.g. 9876543210)' : 'Mobile number or email'}
-                        className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl pl-10 pr-3.5 py-2.5 border border-neutral-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
-                      <input
-                        type="password"
-                        required
-                        value={authPassword}
-                        onChange={(e) => setAuthPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl pl-10 pr-3.5 py-2.5 border border-neutral-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-neutral-700">
-                      <input
-                        type="checkbox"
-                        checked={authRemember}
-                        onChange={(e) => setAuthRemember(e.target.checked)}
-                        className="w-4 h-4 accent-black rounded cursor-pointer"
-                      />
-                      <span className="text-[11px] font-bold">Always remember this session</span>
-                    </label>
-
-                    {authTab === 'login' && (
-                      <Link to="/auth" className="text-[11px] font-black text-neutral-900 hover:underline">
-                        Forgot Password?
-                      </Link>
-                    )}
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={authLoading}
-                    className="w-full py-3 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-xs border border-yellow-500/20 transition active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>{authLoading ? 'Verifying...' : authTab === 'signup' ? 'Create Account & Start' : 'Sign In Now'}</span>
-                    <ArrowRight className="w-4 h-4 stroke-[2.5]" />
-                  </button>
-                </form>
-
-                {/* Quick 1-Click Demo Login */}
-                <div className="pt-3 border-t border-neutral-200 text-center space-y-2">
-                  <span className="text-[10px] text-neutral-500 uppercase tracking-wider font-bold block">Or Quick 1-Click Demo</span>
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => quickDemoLogin('customer')}
-                      className="px-3 py-1.5 rounded-xl bg-black hover:bg-neutral-800 text-white hover:text-yellow-400 text-[11px] font-black transition active:scale-95"
-                    >
-                      Driver Demo
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => quickDemoLogin('provider')}
-                      className="px-3 py-1.5 rounded-xl bg-neutral-900 hover:bg-black text-yellow-400 text-[11px] font-black border border-neutral-700 transition active:scale-95"
-                    >
-                      Host Demo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* ================= LOGGED-IN VEHICLE & WATTS CARD ================= */
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border-2 border-neutral-200 shadow-xl space-y-5 text-neutral-900">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-yellow-400 text-black font-black flex items-center justify-center shadow-xs">
-                      <Zap className="w-5 h-5 fill-black stroke-black" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-neutral-900">
-                        Welcome, {user?.fullName.split(' ')[0]}!
-                      </h3>
-                      <p className="text-xs text-neutral-500 font-semibold">Driver Account Active</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-black text-yellow-400">
-                    Logged In
-                  </span>
-                </div>
-
-                {/* Active Vehicle Status */}
-                {selectedVehicle && !showCarForm ? (
-                  <div className="p-4 rounded-2xl bg-neutral-50 border-2 border-neutral-200 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Car className="w-5 h-5 text-neutral-900 stroke-[2.5]" />
-                        <div>
-                          <span className="font-black text-sm text-neutral-900 block">
-                            {selectedVehicle.manufacturer} {selectedVehicle.model}
-                          </span>
-                          <span className="text-[11px] text-neutral-500 capitalize font-medium">
-                            {selectedVehicle.vehicleType.replace(/_/g, ' ')}
-                            {selectedVehicle.registrationNumber ? ` · ${selectedVehicle.registrationNumber}` : ''}
-                          </span>
+                  <label className="block text-sm font-bold text-neutral-900 mb-2 text-left">
+                    Phone Number
+                  </label>
+                  <div className="flex items-center gap-3 border-b-2 border-neutral-300 focus-within:border-neutral-900 transition pb-2.5">
+                    {/* Indian Flag SVG */}
+                    <div className="w-8 h-5.5 rounded-xs overflow-hidden border border-neutral-200 shrink-0 shadow-xs flex flex-col">
+                      <div className="h-1/3 bg-[#FF9933]" />
+                      <div className="h-1/3 bg-white flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full border border-[#000080] flex items-center justify-center">
+                          <div className="w-0.5 h-0.5 rounded-full bg-[#000080]" />
                         </div>
                       </div>
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-yellow-400 text-black border border-yellow-500/20">
-                        Default
-                      </span>
+                      <div className="h-1/3 bg-[#128807]" />
                     </div>
 
-                    {/* Watts and Ports Specs Pill */}
-                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-neutral-200 text-xs">
-                      <div className="p-2.5 bg-white rounded-xl border border-neutral-200 shadow-xs">
-                        <span className="text-[10px] text-neutral-500 uppercase block font-black">Max AC Power</span>
-                        <span className="font-black text-neutral-900 text-sm">{selectedVehicle.maxAcPowerKw || 7.2} kW</span>
-                      </div>
-                      <div className="p-2.5 bg-white rounded-xl border border-neutral-200 shadow-xs">
-                        <span className="text-[10px] text-neutral-500 uppercase block font-black">Max DC Fast</span>
-                        <span className="font-black text-amber-600 text-sm">{selectedVehicle.maxDcPowerKw || 50} kW</span>
-                      </div>
-                    </div>
+                    {/* Country Code */}
+                    <span className="text-lg font-bold text-neutral-900 select-none">+91</span>
 
-                    <div className="text-[11px] text-neutral-600 font-medium">
-                      <span className="text-neutral-900 font-black uppercase mr-1">Plugs:</span>
-                      {selectedVehicle.supportedConnectorTypes?.join(', ') || 'CCS2, Type 2'}
-                    </div>
-
-                    <div className="pt-2 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => setShowCarForm(true)}
-                        className="text-xs font-black text-black hover:underline flex items-center gap-1 transition"
-                      >
-                        <SlidersHorizontal className="w-3.5 h-3.5" />
-                        <span>Update Car & Watts</span>
-                      </button>
-                      <Link
-                        to="/vehicles"
-                        className="text-xs font-bold text-neutral-600 hover:text-black flex items-center gap-1 transition"
-                      >
-                        <span>Manage Vehicles ({vehicles.length})</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
+                    {/* Phone Input */}
+                    <input
+                      type="tel"
+                      required
+                      autoFocus
+                      maxLength={10}
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
+                      placeholder="98765 43210"
+                      className="w-full bg-transparent text-lg font-semibold tracking-wider text-neutral-900 focus:outline-none placeholder:text-neutral-300"
+                    />
                   </div>
-                ) : (
-                  /* ================= CAR & WATTS ONBOARDING FORM ================= */
-                  <form onSubmit={handleSaveCar} className="space-y-4">
-                    <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-2xl">
-                      <span className="font-black text-xs text-neutral-900 uppercase tracking-wide block">
-                        Vehicle & Charging Specification
-                      </span>
-                      <p className="text-[11px] text-neutral-700 mt-0.5 leading-relaxed font-medium">
-                        Specify your car type and charging wattage (kW) so VFlow can automatically match 100% compatible chargers and parking bays.
-                      </p>
-                    </div>
+                </div>
 
-                    {carSuccessMsg && (
-                      <div className="p-2.5 bg-yellow-400 text-black font-black text-xs rounded-xl flex items-center gap-1.5 shadow-xs">
-                        <CheckCircle2 className="w-4 h-4 shrink-0 stroke-[2.5]" />
-                        <span>{carSuccessMsg}</span>
-                      </div>
-                    )}
+                {/* Legal Disclaimer */}
+                <p className="text-xs text-neutral-600 leading-relaxed text-left font-medium">
+                  By signing up, you accept VFlow's{' '}
+                  <span className="font-bold text-neutral-900 underline underline-offset-2">Terms</span>,{' '}
+                  <span className="font-bold text-neutral-900 underline underline-offset-2">Privacy and Policy</span>.
+                </p>
+              </form>
+            </div>
 
-                    {/* Car Type Selector */}
-                    <div>
-                      <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1.5">
-                        1. Type of Car / Vehicle
-                      </label>
-                      <select
-                        value={carType}
-                        onChange={(e) => setCarType(e.target.value as CustomerVehicleType)}
-                        className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2.5 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                      >
-                        <option value="electric_car">Electric Car (EV)</option>
-                        <option value="hybrid_car">Hybrid Car (PHEV / HEV)</option>
-                        <option value="petrol_car">Petrol Car</option>
-                        <option value="diesel_car">Diesel Car</option>
-                        <option value="electric_two_wheeler">Electric Two-Wheeler (Scooter/Bike)</option>
-                        <option value="petrol_two_wheeler">Petrol Two-Wheeler</option>
-                        <option value="electric_three_wheeler">Electric Three-Wheeler (Auto/Rickshaw)</option>
-                        <option value="other">Other Mobility Vehicle</option>
-                      </select>
-                    </div>
+            {/* Bottom Send OTP Action Button */}
+            <div className="pb-6 space-y-3">
+              <button
+                type="submit"
+                form="phone-form"
+                disabled={phoneNumber.length < 10}
+                className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-base rounded-2xl shadow-md transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span>Send OTP</span>
+                <ArrowRight className="w-5 h-5 stroke-[3]" />
+              </button>
 
-                    {/* Make & Model */}
-                    <div>
-                      <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1.5">
-                        2. Model & Make
-                      </label>
-                      <div className="grid grid-cols-2 gap-1.5 mb-2">
-                        {['Tata Nexon EV', 'MG ZS EV', 'Mahindra XUV400', 'Hyundai Ioniq 5', 'Ather 450X', 'Other'].map((preset) => (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => {
-                              setCarModel(preset);
-                              if (preset.includes('Nexon')) {
-                                setMaxAcKw('7.2');
-                                setMaxDcKw('50');
-                              } else if (preset.includes('ZS')) {
-                                setMaxAcKw('7.4');
-                                setMaxDcKw('50');
-                              } else if (preset.includes('Ioniq')) {
-                                setMaxAcKw('11');
-                                setMaxDcKw('150');
-                              } else if (preset.includes('Ather')) {
-                                setCarType('electric_two_wheeler');
-                                setMaxAcKw('3.3');
-                                setMaxDcKw('0');
-                              }
-                            }}
-                            className={`p-1.5 rounded-lg text-[11px] font-black transition border ${
-                              carModel === preset
-                                ? 'bg-yellow-400 text-black border-yellow-500 shadow-xs'
-                                : 'bg-white text-neutral-700 border-neutral-300 hover:border-black'
-                            }`}
-                          >
-                            {preset}
-                          </button>
-                        ))}
-                      </div>
-
-                      {carModel === 'Other' && (
-                        <input
-                          type="text"
-                          required
-                          value={customModel}
-                          onChange={(e) => setCustomModel(e.target.value)}
-                          placeholder="Enter your vehicle make & model"
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black mt-1 font-semibold"
-                        />
-                      )}
-                    </div>
-
-                    {/* Watts / Power Limits */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1">
-                          Max AC Watts (kW)
-                        </label>
-                        <select
-                          value={maxAcKw}
-                          onChange={(e) => setMaxAcKw(e.target.value)}
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                        >
-                          <option value="3.3">3.3 kW (Slow AC)</option>
-                          <option value="7.2">7.2 kW (Home Wallbox)</option>
-                          <option value="11">11 kW (Three Phase)</option>
-                          <option value="22">22 kW (Commercial AC)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1">
-                          Max DC Watts (kW)
-                        </label>
-                        <select
-                          value={maxDcKw}
-                          onChange={(e) => setMaxDcKw(e.target.value)}
-                          className="w-full bg-neutral-50 text-neutral-900 text-xs rounded-xl px-3 py-2 border border-neutral-300 focus:outline-none focus:border-black font-semibold"
-                        >
-                          <option value="0">None / AC Only</option>
-                          <option value="25">25 kW DC</option>
-                          <option value="30">30 kW DC</option>
-                          <option value="50">50 kW DC Fast</option>
-                          <option value="60">60 kW DC Fast</option>
-                          <option value="100">100 kW Ultra Fast</option>
-                          <option value="150">150 kW Super Fast</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Supported Connectors */}
-                    <div>
-                      <label className="block text-[11px] font-black text-neutral-700 uppercase tracking-wider mb-1.5">
-                        Connector Inlets
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(['CCS2', 'Type 2', 'CHAdeMO', 'Bharat DC-001', '15A_3Pin'] as ConnectorType[]).map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => toggleConnector(c)}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition border ${
-                              selectedConnectors.includes(c)
-                                ? 'bg-black text-yellow-400 border-black shadow-xs'
-                                : 'bg-white text-neutral-700 border-neutral-300 hover:border-black'
-                            }`}
-                          >
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={savingCar}
-                        className="flex-1 py-2.5 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs uppercase tracking-wider rounded-xl shadow-xs border border-yellow-500/20 transition active:scale-95 disabled:opacity-50"
-                      >
-                        {savingCar ? 'Saving...' : 'Save & Show Compatible Providers'}
-                      </button>
-                      {selectedVehicle && (
-                        <button
-                          type="button"
-                          onClick={() => setShowCarForm(false)}
-                          className="px-3 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 font-bold text-xs rounded-xl border border-neutral-300"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-                  </form>
-                )}
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => quickDemoLogin('customer')}
+                  className="text-xs font-black text-neutral-500 hover:text-black underline underline-offset-4"
+                >
+                  ⚡ Or Quick 1-Tap Driver Demo Login
+                </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= STAGE 3: OTP VERIFICATION (Hardcoded '123') ================= */}
+        {onboardingStage === 'otp' && (
+          <div className="flex-1 flex flex-col justify-between px-6 py-6 max-w-md mx-auto w-full animate-in fade-in duration-300">
+            <div className="space-y-6 pt-4 text-left">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
+                  Verify Phone 🔐
+                </h1>
+                <p className="text-xs sm:text-sm text-neutral-600 mt-1 font-medium">
+                  We sent a 3-digit verification code to <span className="font-bold text-neutral-900">+91 {phoneNumber}</span>
+                </p>
+                <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-100 border border-yellow-400 text-black text-xs font-black">
+                  <span>Testing Mode: Enter OTP</span>
+                  <span className="px-1.5 py-0.5 rounded-md bg-black text-yellow-400 font-mono">123</span>
+                </div>
+              </div>
+
+              {otpError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
+              {/* 3-Digit OTP Boxes */}
+              <div className="flex items-center justify-center gap-4 py-4">
+                {[0, 1, 2].map((idx) => (
+                  <input
+                    key={idx}
+                    ref={otpInputRefs[idx]}
+                    type="tel"
+                    maxLength={1}
+                    value={otpDigits[idx]}
+                    onChange={(e) => handleOtpChange(idx, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                    className="w-16 h-18 text-center text-3xl font-black rounded-2xl bg-neutral-50 border-2 border-neutral-300 focus:border-neutral-900 focus:bg-white text-neutral-900 outline-none transition shadow-xs"
+                  />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpDigits(['', '', '']);
+                    setOtpError(null);
+                    otpInputRefs[0].current?.focus();
+                  }}
+                  className="font-bold text-neutral-600 hover:text-black flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Resend OTP</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOnboardingStage('phone')}
+                  className="font-bold text-neutral-900 hover:underline"
+                >
+                  Change Number
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom Verify Action Button */}
+            <div className="pb-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => verifyEnteredOtp()}
+                disabled={authLoading || otpDigits.some((d) => !d)}
+                className="w-full py-4 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-base rounded-2xl shadow-md transition active:scale-95 border border-yellow-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span>{authLoading ? 'Verifying...' : 'Verify OTP'}</span>
+                <Check className="w-5 h-5 stroke-[3]" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // VIEW 2: LOGGED-IN MARKETPLACE APP (OR GUEST BROWSE)
+  // Clean Major White design with interactive MapLibre map and verified stations
+  // =========================================================================
+  const listings = listingsData?.listings || [];
+
+  return (
+    <div className="min-h-screen bg-white text-neutral-900 space-y-8 pb-24 selection:bg-yellow-400 selection:text-black">
+      {/* Top Banner / User Welcome */}
+      <section className="border-b border-neutral-200 bg-neutral-50/70 pt-6 pb-6 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400 text-black text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>Verified EV & Parking Marketplace</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-neutral-900">
+              {isAuthenticated ? `Welcome back, ${user?.fullName?.split(' ')[0] || 'Driver'}! 👋` : 'Explore VFlow Mobility'}
+            </h1>
+            <p className="text-xs sm:text-sm text-neutral-500 font-medium mt-0.5">
+              {isAuthenticated
+                ? selectedVehicle
+                  ? `Active vehicle: ${selectedVehicle.manufacturer} ${selectedVehicle.model} (${selectedVehicle.maxDcPowerKw || 50} kW DC)`
+                  : 'Fast chargers and guaranteed private parking bays ready for reservation'
+                : 'Browse verified high-speed charging hubs and reserved parking bays'}
+            </p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center gap-2">
+            {!isAuthenticated ? (
+              <button
+                onClick={() => setExploreAsGuest(false)}
+                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs rounded-xl shadow-xs transition"
+              >
+                Sign In / Verify OTP
+              </button>
+            ) : (
+              <Link
+                to="/vehicles"
+                className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-900 font-black text-xs rounded-xl border border-neutral-300 transition flex items-center gap-1.5"
+              >
+                <Car className="w-3.5 h-3.5" />
+                <span>My Vehicles ({vehicles.length})</span>
+              </Link>
             )}
           </div>
         </div>
       </section>
 
-      {/* =========================================================================
-          APPLICATION DETAILS & ARCHITECTURAL HIGHLIGHTS SECTION
-          ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        <div className="text-center max-w-3xl mx-auto space-y-3">
-          <div className="inline-block text-[11px] font-black uppercase tracking-widest text-neutral-900 px-3 py-1 rounded-full bg-yellow-400 border border-yellow-500/30 shadow-xs">
-            About VFlow Mobility
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-neutral-900 tracking-tight">
-            Comprehensive Urban Parking & EV Infrastructure
-          </h2>
-          <p className="text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium">
-            Everything you need to know about the platform: from secure barrier digital PIN entries to high-voltage EV chargers and automated next-day host earnings.
-          </p>
-        </div>
-
-        {/* 5 Architecture Pillar Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 bg-white border-2 border-neutral-200 hover:border-black hover:shadow-lg rounded-3xl transition space-y-3 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-xs">
-              <Car className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <h3 className="text-base font-black text-neutral-900">Dual Booking Marketplace</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-              Book parking slots by the hour or day, high-power EV charging wallboxes, or bundled spaces with dedicated charger ports. Guaranteed reserved bays with no street hunting.
-            </p>
-          </div>
-
-          <div className="p-6 bg-white border-2 border-neutral-200 hover:border-black hover:shadow-lg rounded-3xl transition space-y-3 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-black text-yellow-400 flex items-center justify-center shadow-xs">
-              <BatteryCharging className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <h3 className="text-base font-black text-neutral-900">Power & Watts Compatibility Engine</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-              VFlow verifies your car's AC and DC charging limits against the station's rated power. Overbooking prevention models each physical connector as an independent resource.
-            </p>
-          </div>
-
-          <div className="p-6 bg-white border-2 border-neutral-200 hover:border-black hover:shadow-lg rounded-3xl transition space-y-3 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-xs">
-              <CreditCard className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <h3 className="text-base font-black text-neutral-900">Guaranteed Next-Day Host Settlements</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-              Property owners and station hosts receive payouts for completed parking and charging reservations on the very next calendar day via Razorpay automated settlement ledger.
-            </p>
-          </div>
-
-          <div className="p-6 bg-white border-2 border-neutral-200 hover:border-black hover:shadow-lg rounded-3xl transition space-y-3 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-black text-yellow-400 flex items-center justify-center shadow-xs">
-              <Lock className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <h3 className="text-base font-black text-neutral-900">Digital PIN Barrier Access</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-              Instant entry without gatekeeper delays. Every confirmed booking issues an encrypted 4-digit PIN for boom barriers, automatic gates, and basement parking lifts.
-            </p>
-          </div>
-
-          <div className="p-6 bg-white border-2 border-neutral-200 hover:border-black hover:shadow-lg rounded-3xl transition space-y-3 md:col-span-2 shadow-xs">
-            <div className="w-12 h-12 rounded-2xl bg-yellow-400 text-black flex items-center justify-center shadow-xs">
-              <Compass className="w-6 h-6 stroke-[2.5]" />
-            </div>
-            <h3 className="text-base font-black text-neutral-900">Integrated Destination & Hangout Engine</h3>
-            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-              Turn charging downtime into productive leisure. VFlow highlights artisan cafes, lounges, retail hubs, and workspaces within a 5-minute stroll of your selected charging bay.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          COMPREHENSIVE BLOG & ARTICLE SECTION (ON MAIN WEBSITE)
-          ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 border-t border-neutral-200 pt-16">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-          <div>
-            <div className="inline-block text-[11px] font-black uppercase tracking-widest text-neutral-900 px-3 py-1 rounded-full bg-yellow-400 border border-yellow-500/20 mb-2 shadow-xs">
-              VFlow Knowledge Hub
-            </div>
-            <h2 className="text-3xl font-black text-neutral-900 tracking-tight">
-              EV Insights, Charging Watts & Host Guides
-            </h2>
-            <p className="text-xs text-neutral-500 mt-1 font-medium">
-              Deep dive into electric mobility wattage, connector types, and property monetization in India.
-            </p>
-          </div>
-        </div>
-
-        {/* Blog Articles Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Article 1 */}
-          <article className="bg-white border-2 border-neutral-200 rounded-3xl overflow-hidden hover:border-black hover:shadow-lg transition flex flex-col justify-between shadow-xs">
-            <div className="p-6 space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-neutral-900 font-black">
-                <span className="bg-yellow-100 text-black px-2 py-0.5 rounded-full border border-yellow-300">Watts & Charging Speeds</span>
-                <span className="text-neutral-500">5 min read</span>
-              </div>
-              <h3 className="text-base font-black text-neutral-900 hover:text-black transition">
-                Decoding EV Watts: How 7.2 kW AC vs 60 kW DC Charging Impacts Battery Life
-              </h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Understand the difference between onboard alternating current (AC) converters and high-voltage direct current (DC) fast chargers. Discover why higher wattage charges your battery from 10% to 80% in 45 minutes without premature degradation.
-              </p>
-            </div>
-            <div className="px-6 pb-6 pt-3 border-t border-neutral-100 flex items-center justify-between text-xs font-black text-neutral-900 group">
-              <span>Read Full Article</span>
-              <div className="w-7 h-7 rounded-full bg-yellow-400 text-black flex items-center justify-center">
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-            </div>
-          </article>
-
-          {/* Article 2 */}
-          <article className="bg-white border-2 border-neutral-200 rounded-3xl overflow-hidden hover:border-black hover:shadow-lg transition flex flex-col justify-between shadow-xs">
-            <div className="p-6 space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-neutral-900 font-black">
-                <span className="bg-yellow-100 text-black px-2 py-0.5 rounded-full border border-yellow-300">Property Monetization</span>
-                <span className="text-neutral-500">4 min read</span>
-              </div>
-              <h3 className="text-base font-black text-neutral-900 hover:text-black transition">
-                How Commercial & Residential Hosts Earn ₹45,000+ Monthly With VFlow
-              </h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Whether you have an empty office driveway or a residential apartment stilt lot, learn how hosts install certified EV wallboxes, establish custom hourly parking fees, and enjoy next-day automated bank transfers directly through VFlow.
-              </p>
-            </div>
-            <div className="px-6 pb-6 pt-3 border-t border-neutral-100 flex items-center justify-between text-xs font-black text-neutral-900 group">
-              <span>Read Full Article</span>
-              <div className="w-7 h-7 rounded-full bg-yellow-400 text-black flex items-center justify-center">
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-            </div>
-          </article>
-
-          {/* Article 3 */}
-          <article className="bg-white border-2 border-neutral-200 rounded-3xl overflow-hidden hover:border-black hover:shadow-lg transition flex flex-col justify-between shadow-xs">
-            <div className="p-6 space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-neutral-900 font-black">
-                <span className="bg-yellow-100 text-black px-2 py-0.5 rounded-full border border-yellow-300">Plugs & Compatibility</span>
-                <span className="text-neutral-500">6 min read</span>
-              </div>
-              <h3 className="text-base font-black text-neutral-900 hover:text-black transition">
-                The Indian EV Connector Guide: CCS2, Type 2, Bharat DC-001 & 15A Sockets
-              </h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                India's EV landscape features multiple standard plugs. Find out which cars use CCS-2 Combo, why European Type 2 cables dominate three-phase AC, and how electric two-wheelers leverage proprietary fast ports or domestic 15A wall plugs.
-              </p>
-            </div>
-            <div className="px-6 pb-6 pt-3 border-t border-neutral-100 flex items-center justify-between text-xs font-black text-neutral-900 group">
-              <span>Read Full Article</span>
-              <div className="w-7 h-7 rounded-full bg-yellow-400 text-black flex items-center justify-center">
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      {/* =========================================================================
-          NEARBY PROVIDERS SECTION (AT THE BOTTOM OF THE PAGE)
-          ========================================================================= */}
-      <section id="nearby-providers-section" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 border-t border-neutral-200 pt-16">
-        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-neutral-900 px-3 py-1 rounded-full bg-yellow-400 border border-yellow-500/20 mb-2 shadow-xs">
-              <MapPin className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Real-Time Verified Listings</span>
-            </div>
-            <h2 className="text-3xl font-black text-neutral-900 tracking-tight">
-              Nearby Providers & Charging Hubs
-            </h2>
-            <p className="text-xs text-neutral-500 mt-1 font-medium">
-              {selectedVehicle
-                ? `Showing verified locations matching ${selectedVehicle.manufacturer} ${selectedVehicle.model} (${selectedVehicle.maxDcPowerKw || 50} kW DC)`
-                : 'Browse available parking bays and high-speed EV stations across your city'}
-            </p>
-          </div>
-
-          {/* Quick Filter Buttons: Black and Yellow buttons */}
+      {/* Main Interactive Map & Search Hub */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Service Type Filter Buttons */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setServiceFilter('all')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition active:scale-95 ${
                 serviceFilter === 'all'
-                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                  : 'bg-white text-neutral-700 hover:text-black hover:bg-neutral-100 border border-neutral-300'
+                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/20'
+                  : 'bg-white text-neutral-700 hover:text-black border border-neutral-300'
               }`}
             >
-              All Providers
+              All Hubs ({listings.length})
             </button>
             <button
               onClick={() => setServiceFilter('charging')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 active:scale-95 ${
                 serviceFilter === 'charging'
-                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                  : 'bg-white text-neutral-700 hover:text-black hover:bg-neutral-100 border border-neutral-300'
+                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/20'
+                  : 'bg-white text-neutral-700 hover:text-black border border-neutral-300'
               }`}
             >
-              <Zap className="w-3.5 h-3.5 fill-current stroke-current" />
-              <span>EV Charging</span>
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>EV Fast Charging</span>
             </button>
             <button
               onClick={() => setServiceFilter('parking')}
               className={`px-4 py-2 rounded-xl text-xs font-black transition flex items-center gap-1.5 active:scale-95 ${
                 serviceFilter === 'parking'
-                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
-                  : 'bg-white text-neutral-700 hover:text-black hover:bg-neutral-100 border border-neutral-300'
+                  ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/20'
+                  : 'bg-white text-neutral-700 hover:text-black border border-neutral-300'
               }`}
             >
-              <Car className="w-3.5 h-3.5 stroke-[2.5]" />
+              <Car className="w-3.5 h-3.5" />
               <span>Parking Only</span>
             </button>
           </div>
+
+          <div className="flex items-center gap-2 text-xs font-bold text-neutral-500">
+            <span>City:</span>
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="bg-neutral-100 text-neutral-900 font-black px-2.5 py-1.5 rounded-xl border border-neutral-300 cursor-pointer focus:outline-none"
+            >
+              <option value="Bangalore">Bangalore</option>
+              <option value="Mumbai">Mumbai</option>
+              <option value="Delhi-NCR">Delhi-NCR</option>
+              <option value="Hyderabad">Hyderabad</option>
+            </select>
+          </div>
         </div>
 
-        {/* Listings Grid */}
-        {listingsLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="h-72 bg-neutral-100 rounded-3xl animate-pulse border border-neutral-200" />
-            ))}
+        {/* Interactive MapLibre GL Map (Zepto-style) */}
+        <div className="h-[460px] sm:h-[520px] rounded-3xl overflow-hidden border-2 border-neutral-200 shadow-md">
+          <ListingMap listings={listings} />
+        </div>
+
+        {/* Verified Listings Grid */}
+        <div className="space-y-4 pt-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-black text-neutral-900">
+              Verified Spots in {cityFilter}
+            </h3>
+            <span className="text-xs text-neutral-500 font-semibold">{listings.length} available</span>
           </div>
-        ) : listingsData && listingsData.listings && listingsData.listings.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listingsData.listings.map((listing) => (
-              <ListingCard key={listing._id} listing={listing} />
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-neutral-50 rounded-3xl border border-neutral-200 space-y-3">
-            <Car className="w-10 h-10 text-neutral-400 mx-auto" />
-            <h4 className="font-black text-neutral-900 text-base">No providers found for current filter</h4>
-            <p className="text-xs text-neutral-500 max-w-sm mx-auto font-medium">
-              Try switching between EV Charging and Parking Only or explore listings across Bangalore.
-            </p>
-            <button
-              onClick={() => setServiceFilter('all')}
-              className="px-4 py-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs rounded-xl shadow-xs transition"
-            >
-              Reset Filters
-            </button>
-          </div>
-        )}
+
+          {listingsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="h-72 bg-neutral-100 rounded-3xl animate-pulse border border-neutral-200" />
+              ))}
+            </div>
+          ) : listings.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listings.map((item) => (
+                <ListingCard key={item._id} listing={item} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-neutral-50 rounded-3xl border border-neutral-200 space-y-2">
+              <Car className="w-8 h-8 text-neutral-400 mx-auto" />
+              <h4 className="font-black text-neutral-900">No stations match current filter</h4>
+              <p className="text-xs text-neutral-500">Try switching filters or selecting another city.</p>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

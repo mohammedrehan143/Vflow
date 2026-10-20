@@ -38,3 +38,6 @@ Thumbs.db
 # Testing
 coverage
 .nyc_output
+
+# Local user reference images
+image*.png

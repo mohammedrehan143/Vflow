@@ -13,6 +13,7 @@ interface AuthContextType {
     password?: string,
     remember?: boolean
   ) => Promise<any>;
+  loginWithOtp: (phone: string, otp: string) => Promise<any>;
   register: (userData: any) => Promise<any>;
   logout: () => void;
   selectRole: (role: 'customer' | 'provider') => Promise<void>;
@@ -98,6 +99,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithOtp = async (phone: string, otp: string) => {
+    if (otp.trim() !== '123') {
+      throw new Error('Invalid OTP. Please enter 123');
+    }
+    const cleanDigits = phone.replace(/\D/g, '').slice(-10) || '9876543210';
+    const email = `${cleanDigits}@vflow.user`;
+    const password = 'VFlow@123';
+
+    setIsLoading(true);
+    try {
+      let res;
+      try {
+        res = await api.auth.login({ email, password });
+      } catch (loginErr) {
+        // If account doesn't exist yet, auto-register with phone
+        res = await api.auth.register({
+          fullName: `Driver ${cleanDigits.slice(-4)}`,
+          phone: cleanDigits,
+          email,
+          password,
+          role: 'customer',
+        });
+      }
+
+      if (res && res.success && res.token) {
+        localStorage.setItem('vflow_token', res.token);
+        setToken(res.token);
+        setUser(res.user);
+      }
+      return res;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const register = async (userData: any) => {
     setIsLoading(true);
     try {
@@ -151,6 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isLoading,
         login,
+        loginWithOtp,
         register,
         logout,
         selectRole,

@@ -61,21 +61,19 @@ export const VehicleManagement: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.vehicles.list();
-      if (res.success) {
-        setVehicles(res.vehicles || []);
+      if (res.success && res.vehicles) {
+        setVehicles(res.vehicles);
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load vehicles');
+      setError(err.message || 'Failed to fetch registered vehicles');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchVehicles();
-    }
-  }, [isAuthenticated]);
+    fetchVehicles();
+  }, []);
 
   const resetForm = () => {
     setEditingVehicleId(null);
@@ -190,29 +188,32 @@ export const VehicleManagement: React.FC = () => {
   const isElectricCapable = powertrain === 'electric' || powertrain === 'hybrid';
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8 bg-white min-h-screen text-neutral-900">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-neutral-200">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Car className="w-8 h-8 text-emerald-600" />
-            <span>My Vehicles & Compatibility</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400 text-black text-xs font-black uppercase tracking-wider mb-2 shadow-xs">
+            <Car className="w-4 h-4 stroke-[2.5]" />
+            <span>Vehicle Specifications</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight">
+            My Vehicles & Compatibility
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 font-medium">
             Manage your vehicles to automatically filter compatible EV chargers and parking spaces.
           </p>
         </div>
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl shadow-md shadow-emerald-600/20 text-xs transition"
+          className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black px-4 py-2.5 rounded-xl shadow-xs text-xs transition active:scale-95 border border-yellow-500/20"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Add New Vehicle</span>
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 text-red-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+        <div className="p-3 bg-red-50 text-red-800 rounded-xl text-xs font-bold flex items-center gap-2 border border-red-200">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -222,25 +223,25 @@ export const VehicleManagement: React.FC = () => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
-            <div key={i} className="h-44 bg-slate-200/70 rounded-2xl animate-pulse" />
+            <div key={i} className="h-44 bg-neutral-100 rounded-3xl animate-pulse border border-neutral-200" />
           ))}
         </div>
       ) : vehicles.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-dashed border-slate-300 p-10 text-center space-y-4">
-          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto">
+        <div className="bg-white rounded-3xl border-2 border-dashed border-neutral-300 p-10 text-center space-y-4">
+          <div className="w-14 h-14 bg-yellow-100 text-black rounded-2xl flex items-center justify-center mx-auto border border-yellow-300">
             <BatteryCharging className="w-7 h-7" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-slate-900">No Vehicles Registered Yet</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <h3 className="text-base font-black text-neutral-900">No Vehicles Registered Yet</h3>
+            <p className="text-xs text-neutral-500 max-w-sm mx-auto font-medium">
               Add your EV or combustion vehicle to receive personalized compatibility checks and seamless parking bookings.
             </p>
           </div>
           <button
             onClick={handleOpenAdd}
-            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm"
+            className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-black font-black px-4 py-2.5 rounded-xl text-xs shadow-xs active:scale-95 border border-yellow-500/20"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Add Vehicle Now</span>
           </button>
         </div>
@@ -251,8 +252,8 @@ export const VehicleManagement: React.FC = () => {
             return (
               <div
                 key={v._id}
-                className={`bg-white rounded-3xl border p-5 sm:p-6 space-y-4 transition hover:shadow-lg relative ${
-                  v.isDefault ? 'border-emerald-500 ring-2 ring-emerald-500/10' : 'border-slate-200 shadow-sm'
+                className={`bg-white rounded-3xl border-2 p-5 sm:p-6 space-y-4 transition hover:shadow-md relative ${
+                  v.isDefault ? 'border-yellow-400 shadow-xs' : 'border-neutral-200 shadow-xs'
                 }`}
               >
                 {/* Header */}
@@ -260,23 +261,23 @@ export const VehicleManagement: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-                        isEv ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        isEv ? 'bg-yellow-400 text-black font-black' : 'bg-neutral-100 text-neutral-700'
                       }`}
                     >
-                      {isEv ? <Zap className="w-5 h-5 fill-emerald-600 text-emerald-600" /> : <Fuel className="w-5 h-5" />}
+                      {isEv ? <Zap className="w-5 h-5 fill-current stroke-current" /> : <Fuel className="w-5 h-5" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-bold text-slate-900">
+                        <h3 className="text-base font-black text-neutral-900">
                           {v.manufacturer} {v.model}
                         </h3>
                         {v.isDefault && (
-                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-                            <Star className="w-3 h-3 fill-emerald-600" /> Default
+                          <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
+                            <Star className="w-3 h-3 fill-black" /> Default
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 font-medium">
+                      <p className="text-xs text-neutral-500 font-medium">
                         {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType} •{' '}
                         {POWERTRAIN_LABELS[v.powertrain] || v.powertrain}
                       </p>
@@ -286,14 +287,14 @@ export const VehicleManagement: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleOpenEdit(v)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition"
+                      className="p-1.5 text-neutral-400 hover:text-black hover:bg-neutral-100 rounded-lg transition"
                       title="Edit Vehicle"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(v._id)}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="Delete Vehicle"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -302,11 +303,11 @@ export const VehicleManagement: React.FC = () => {
                 </div>
 
                 {/* Specs Pill List */}
-                <div className="bg-slate-50 rounded-2xl p-3 space-y-2 border border-slate-100 text-xs">
+                <div className="bg-neutral-50 rounded-2xl p-3.5 space-y-2 border border-neutral-200 text-xs">
                   {v.registrationNumber && (
-                    <div className="flex justify-between items-center text-slate-600">
-                      <span className="text-[11px] text-slate-400 uppercase font-bold">Plate / Reg</span>
-                      <span className="font-mono font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+                    <div className="flex justify-between items-center text-neutral-600">
+                      <span className="text-[11px] text-neutral-500 uppercase font-black">Plate / Reg</span>
+                      <span className="font-mono font-black text-neutral-900 bg-white px-2 py-0.5 rounded-lg border border-neutral-200">
                         {v.registrationNumber}
                       </span>
                     </div>
@@ -314,27 +315,27 @@ export const VehicleManagement: React.FC = () => {
 
                   {isEv && (
                     <>
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span className="text-[11px] text-slate-400 uppercase font-bold">Supported Inlets</span>
+                      <div className="flex justify-between items-center text-neutral-600">
+                        <span className="text-[11px] text-neutral-500 uppercase font-black">Supported Inlets</span>
                         <div className="flex flex-wrap gap-1 justify-end">
                           {v.supportedConnectorTypes && v.supportedConnectorTypes.length > 0 ? (
                             v.supportedConnectorTypes.map((c) => (
                               <span
                                 key={c}
-                                className="bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-md"
+                                className="bg-yellow-100 text-black border border-yellow-300 text-[10px] font-black px-2 py-0.5 rounded-md"
                               >
                                 {CONNECTOR_TYPE_LABELS[c as ConnectorType] || c}
                               </span>
                             ))
                           ) : (
-                            <span className="text-slate-400">None specified</span>
+                            <span className="text-neutral-400">None specified</span>
                           )}
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center text-slate-600">
-                        <span className="text-[11px] text-slate-400 uppercase font-bold">Max Power Intake</span>
-                        <div className="flex gap-2 text-[11px] font-semibold text-slate-700">
+                      <div className="flex justify-between items-center text-neutral-600">
+                        <span className="text-[11px] text-neutral-500 uppercase font-black">Max Power Intake</span>
+                        <div className="flex gap-2 text-[11px] font-black text-neutral-900">
                           {v.maxAcPowerKw && <span>AC: {v.maxAcPowerKw} kW</span>}
                           {v.maxDcPowerKw && <span>DC: {v.maxDcPowerKw} kW</span>}
                         </div>
@@ -348,14 +349,14 @@ export const VehicleManagement: React.FC = () => {
                   {!v.isDefault ? (
                     <button
                       onClick={() => handleSetDefault(v._id)}
-                      className="text-xs font-bold text-slate-600 hover:text-emerald-600 flex items-center gap-1.5 transition"
+                      className="text-xs font-black text-neutral-700 hover:text-black flex items-center gap-1.5 transition"
                     >
-                      <Star className="w-3.5 h-3.5 text-slate-400" />
+                      <Star className="w-3.5 h-3.5 text-neutral-400" />
                       <span>Set as Default Vehicle</span>
                     </button>
                   ) : (
-                    <span className="text-xs text-emerald-700 font-semibold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Used by default for instant booking
+                    <span className="text-xs text-black font-black flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 stroke-[3] text-yellow-500" /> Used by default for instant booking
                     </span>
                   )}
                 </div>
@@ -367,26 +368,26 @@ export const VehicleManagement: React.FC = () => {
 
       {/* Add / Edit Vehicle Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-5 shadow-2xl relative border-2 border-neutral-900 animate-in fade-in zoom-in-95">
             <button
               onClick={() => setShowModal(false)}
-              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600"
+              className="absolute top-5 right-5 text-neutral-400 hover:text-black p-1 rounded-full"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="space-y-1">
-              <h2 className="text-xl font-black text-slate-900">
+              <h2 className="text-xl font-black text-neutral-900">
                 {editingVehicleId ? 'Edit Vehicle Specifications' : 'Add New Customer Vehicle'}
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-neutral-500 font-medium">
                 Accurate vehicle specs ensure verified charger matching and avoid booking incompatible spots.
               </p>
             </div>
 
             {error && (
-              <div className="p-3 bg-red-50 text-red-800 rounded-xl text-xs font-semibold flex items-center gap-2">
+              <div className="p-3 bg-red-50 text-red-800 rounded-xl text-xs font-bold flex items-center gap-2 border border-red-200">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -395,11 +396,11 @@ export const VehicleManagement: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Vehicle Type */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Vehicle Category</label>
+                <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">Vehicle Category</label>
                 <select
                   value={vehicleType}
                   onChange={(e) => handleVehicleTypeChange(e.target.value as CustomerVehicleType)}
-                  className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-bold focus:outline-none focus:border-black"
                 >
                   <option value="electric_car">Electric Car (EV)</option>
                   <option value="hybrid_car">Hybrid Car (PHEV/HEV)</option>
@@ -415,24 +416,24 @@ export const VehicleManagement: React.FC = () => {
               {/* Make & Model */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Manufacturer / Make</label>
+                  <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">Manufacturer / Make</label>
                   <input
                     type="text"
                     value={manufacturer}
                     onChange={(e) => setManufacturer(e.target.value)}
-                    placeholder="e.g. Tata Motors / MG / Ather"
-                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    placeholder="e.g. Tata / MG / Ather"
+                    className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-bold focus:outline-none focus:border-black"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Model Name</label>
+                  <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">Model Name</label>
                   <input
                     type="text"
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
                     placeholder="e.g. Nexon EV / 450X"
-                    className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-bold focus:outline-none focus:border-black"
                     required
                   />
                 </div>
@@ -440,28 +441,28 @@ export const VehicleManagement: React.FC = () => {
 
               {/* Registration Plate */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
-                  Registration Number <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">
+                  Registration Number <span className="text-neutral-400 font-medium lowercase">(optional)</span>
                 </label>
                 <input
                   type="text"
                   value={registrationNumber}
                   onChange={(e) => setRegistrationNumber(e.target.value)}
                   placeholder="e.g. KA-01-EQ-1234"
-                  className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold uppercase focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-bold uppercase focus:outline-none focus:border-black"
                 />
               </div>
 
               {/* EV-Specific Specifications */}
               {isElectricCapable && (
-                <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 space-y-3.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-950">
-                    <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+                <div className="p-4 bg-yellow-50 rounded-2xl border border-yellow-300 space-y-3.5">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-neutral-900">
+                    <Zap className="w-4 h-4 fill-black stroke-black" />
                     <span>EV Inlets & Charging Limits</span>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                    <label className="block text-[11px] font-black text-neutral-700 mb-1.5">
                       Supported Connectors (Select all compatible)
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -472,13 +473,13 @@ export const VehicleManagement: React.FC = () => {
                             type="button"
                             key={connector}
                             onClick={() => toggleConnector(connector)}
-                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-black transition flex items-center gap-1 ${
                               isSelected
-                                ? 'bg-emerald-600 text-white shadow-sm'
-                                : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                                ? 'bg-black text-yellow-400 border border-black shadow-xs'
+                                : 'bg-white border border-neutral-300 text-neutral-700 hover:text-black'
                             }`}
                           >
-                            {isSelected && <Check className="w-3 h-3" />}
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                             <span>{CONNECTOR_TYPE_LABELS[connector] || connector}</span>
                           </button>
                         );
@@ -488,7 +489,7 @@ export const VehicleManagement: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">
                         Max AC Power (kW)
                       </label>
                       <input
@@ -499,11 +500,11 @@ export const VehicleManagement: React.FC = () => {
                         value={maxAcPowerKw}
                         onChange={(e) => setMaxAcPowerKw(e.target.value)}
                         placeholder="e.g. 7.4"
-                        className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-bold focus:outline-none focus:border-black"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-[11px] font-black text-neutral-700 uppercase mb-1">
                         Max DC Power (kW)
                       </label>
                       <input
@@ -514,11 +515,11 @@ export const VehicleManagement: React.FC = () => {
                         value={maxDcPowerKw}
                         onChange={(e) => setMaxDcPowerKw(e.target.value)}
                         placeholder="e.g. 50"
-                        className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-bold focus:outline-none focus:border-black"
                       />
                     </div>
                   </div>
-                  <p className="text-[11px] text-emerald-800/80 leading-relaxed flex items-center gap-1">
+                  <p className="text-[11px] text-neutral-700 leading-relaxed flex items-center gap-1 font-medium">
                     <Info className="w-3.5 h-3.5 shrink-0" />
                     <span>Actual charging speed is bounded by your vehicle's max kW limit.</span>
                   </p>
@@ -532,9 +533,9 @@ export const VehicleManagement: React.FC = () => {
                   id="defaultVehicle"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded border-neutral-300 accent-black cursor-pointer w-4 h-4"
                 />
-                <label htmlFor="defaultVehicle" className="text-xs text-slate-700 font-medium select-none">
+                <label htmlFor="defaultVehicle" className="text-xs text-neutral-700 font-bold select-none cursor-pointer">
                   Set as my default vehicle for instant reservations
                 </label>
               </div>
@@ -544,14 +545,14 @@ export const VehicleManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-bold transition"
+                  className="px-4 py-2.5 rounded-xl border border-neutral-300 text-neutral-700 hover:text-black hover:bg-neutral-50 text-xs font-black transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md shadow-emerald-600/20"
+                  className="px-5 py-2.5 rounded-xl bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black transition shadow-xs active:scale-95 border border-yellow-500/20"
                 >
                   {submitting ? 'Saving...' : editingVehicleId ? 'Update Vehicle' : 'Save Vehicle'}
                 </button>

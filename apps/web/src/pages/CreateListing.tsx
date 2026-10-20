@@ -186,31 +186,31 @@ export const CreateListing: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-white min-h-screen text-neutral-900">
       <div>
-        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 uppercase tracking-wider">
-          <Layers className="w-3.5 h-3.5" />
+        <div className="inline-flex items-center gap-1.5 text-xs font-black text-neutral-900 bg-yellow-400 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs mb-1">
+          <Layers className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Provider Resource Hub</span>
         </div>
-        <h1 className="text-3xl font-black text-slate-900 mt-1">
+        <h1 className="text-3xl font-black text-neutral-900 mt-1">
           Create Parking or EV Charger Listing
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-neutral-500 mt-1 font-medium">
           Publish your parking space or EV charging ports with verified technical specifications and guaranteed next-day payouts.
         </p>
       </div>
 
       {errorMessage && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-xs font-bold flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8 space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl border-2 border-neutral-200 shadow-xl p-6 sm:p-8 space-y-6">
         {/* Service Type Selection */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 mb-2 uppercase">Service Type</label>
+          <label className="block text-xs font-black text-neutral-700 mb-2 uppercase">Service Type</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { id: 'parking', label: '🅿️ Parking Only' },
@@ -221,10 +221,10 @@ export const CreateListing: React.FC = () => {
                 type="button"
                 key={t.id}
                 onClick={() => setServiceType(t.id as ServiceType)}
-                className={`py-3 px-3 rounded-2xl border text-xs font-bold transition text-center ${
+                className={`py-3 px-3 rounded-2xl border-2 text-xs font-black transition text-center active:scale-95 ${
                   serviceType === t.id
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    ? 'bg-yellow-400 border-black text-black shadow-xs'
+                    : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-black'
                 }`}
               >
                 {t.label}
@@ -236,56 +236,56 @@ export const CreateListing: React.FC = () => {
         {/* Title & Description */}
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Listing Title</label>
+            <label className="block text-xs font-black text-neutral-700 mb-1">Listing Title</label>
             <input
               type="text"
+              required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Secure Covered Bay with 22kW Type-2 AC Wallbox"
-              className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
+              placeholder="e.g. Indiranagar Metro Covered Bay + 22 kW EV Wallbox"
+              className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold focus:outline-none focus:border-black"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Detailed Description</label>
+            <label className="block text-xs font-black text-neutral-700 mb-1">Description</label>
             <textarea
               rows={3}
+              required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe access gate, security guards, roof protection, and parking dimensions..."
-              className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
+              placeholder="Provide directions, basement level info, entry guidelines, security presence..."
+              className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-medium focus:outline-none focus:border-black"
             />
           </div>
         </div>
 
-        {/* Location & Coordinates */}
-        <div className="space-y-3 pt-3 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Location & Address</span>
+        {/* Location Section */}
+        <div className="space-y-3 pt-3 border-t border-neutral-100">
+          <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-black stroke-[2.5]" />
+            <span>Bay Location & Geo-Coordinates</span>
           </h4>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Street Address</label>
+            <label className="block text-xs font-black text-neutral-700 mb-1">Street Address</label>
             <input
               type="text"
+              required
               value={street}
               onChange={(e) => setStreet(e.target.value)}
-              placeholder="e.g. 45 Lavelle Road, Near UB City"
-              className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              required
+              placeholder="100 Feet Road, HAL 2nd Stage"
+              className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold focus:outline-none focus:border-black"
             />
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">City</label>
+              <label className="block text-xs font-black text-neutral-700 mb-1">City</label>
               <select
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold cursor-pointer"
               >
                 <option value="Bangalore">Bangalore</option>
                 <option value="Mumbai">Mumbai</option>
@@ -296,71 +296,83 @@ export const CreateListing: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">State</label>
+              <label className="block text-xs font-black text-neutral-700 mb-1">State</label>
               <input
                 type="text"
+                required
                 value={state}
                 onChange={(e) => setState(e.target.value)}
-                className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">PIN Code</label>
+              <label className="block text-xs font-black text-neutral-700 mb-1">Postal Code</label>
               <input
                 type="text"
+                required
                 value={postalCode}
                 onChange={(e) => setPostalCode(e.target.value)}
-                placeholder="560001"
-                className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
-                required
+                placeholder="560038"
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Entry & Access Instructions</label>
-            <input
-              type="text"
-              value={entryExitInstructions}
-              onChange={(e) => setEntryExitInstructions(e.target.value)}
-              placeholder="e.g. Show booking PIN to security gate; charger gun #1 is on right pillar."
-              className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-semibold"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-black text-neutral-500 uppercase mb-1">Latitude</label>
+              <input
+                type="text"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-black text-neutral-500 uppercase mb-1">Longitude</label>
+              <input
+                type="text"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-semibold"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Pricing Setup */}
-        <div className="space-y-3 pt-3 border-t border-slate-100">
-          <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Pricing Configuration</span>
+        {/* Pricing Configuration */}
+        <div className="space-y-3 pt-3 border-t border-neutral-100">
+          <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+            <DollarSign className="w-3.5 h-3.5 text-black stroke-[2.5]" />
+            <span>Pricing & Tariffs (INR)</span>
           </h4>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Hourly Parking Rate (₹)</label>
+              <label className="block text-xs font-black text-neutral-700 mb-1">Hourly Parking Rate (₹)</label>
               <input
                 type="number"
+                min="0"
+                required
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(e.target.value)}
-                placeholder="80"
-                className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-                required
+                className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-black text-neutral-900"
               />
             </div>
 
             {serviceType !== 'parking' && (
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  EV Charging Rate ({pricingModel === 'per_kwh' ? '₹ / kWh' : pricingModel === 'per_hour' ? '₹ / hr' : '₹ / session'})
+                <label className="block text-xs font-black text-neutral-700 mb-1">
+                  EV Charging Rate (₹ per kWh / unit)
                 </label>
                 <input
                   type="number"
+                  min="0"
+                  step="0.5"
+                  required
                   value={chargingPricePerUnit}
                   onChange={(e) => setChargingPricePerUnit(e.target.value)}
-                  placeholder="18"
-                  className="w-full text-xs p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-emerald-800"
-                  required
+                  className="w-full text-xs p-3 rounded-xl bg-neutral-50 border border-neutral-300 font-black text-amber-600"
                 />
               </div>
             )}
@@ -369,20 +381,20 @@ export const CreateListing: React.FC = () => {
 
         {/* EV Hardware Specifications if Charging enabled */}
         {serviceType !== 'parking' && (
-          <div className="space-y-4 pt-3 border-t border-slate-100 bg-emerald-50/50 p-5 rounded-2xl border border-emerald-100">
+          <div className="space-y-4 pt-3 border-t border-neutral-100 bg-yellow-50/70 p-5 rounded-2xl border-2 border-yellow-200">
             <div className="flex items-center justify-between">
-              <h4 className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-emerald-600 fill-emerald-600" />
+              <h4 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+                <Zap className="w-4 h-4 fill-black stroke-black" />
                 <span>EV Charger Technical Specifications</span>
               </h4>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">
+              <span className="text-[10px] bg-yellow-400 text-black font-black px-2 py-0.5 rounded-full shadow-xs">
                 Resource Model
               </span>
             </div>
 
             {/* AC / DC Toggle */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1.5">Current Type</label>
+              <label className="block text-[11px] font-black text-neutral-700 mb-1.5">Current Type</label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -390,10 +402,10 @@ export const CreateListing: React.FC = () => {
                     setChargerType('AC');
                     if (connectorType === 'CCS2') setConnectorType('Type 2');
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition border ${
+                  className={`py-2 px-3 rounded-xl text-xs font-black transition border-2 ${
                     chargerType === 'AC'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-black text-yellow-400 border-black shadow-xs'
+                      : 'bg-white text-neutral-700 border-neutral-300 hover:border-black'
                   }`}
                 >
                   ⚡ AC Wallbox (Slow / Fast)
@@ -404,10 +416,10 @@ export const CreateListing: React.FC = () => {
                     setChargerType('DC');
                     if (connectorType === 'Type 2') setConnectorType('CCS2');
                   }}
-                  className={`py-2 px-3 rounded-xl text-xs font-bold transition border ${
+                  className={`py-2 px-3 rounded-xl text-xs font-black transition border-2 ${
                     chargerType === 'DC'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      ? 'bg-black text-yellow-400 border-black shadow-xs'
+                      : 'bg-white text-neutral-700 border-neutral-300 hover:border-black'
                   }`}
                 >
                   🚀 DC High-Speed (Rapid)
@@ -417,7 +429,7 @@ export const CreateListing: React.FC = () => {
 
             {/* Rated Charging Power in kW: Presets + Custom */}
             <div>
-              <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+              <label className="block text-[11px] font-black text-neutral-700 mb-1.5">
                 Rated Charging Power (kW)
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
@@ -426,10 +438,10 @@ export const CreateListing: React.FC = () => {
                     type="button"
                     key={kw}
                     onClick={() => handlePowerPreset(kw)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                    className={`px-3 py-1 rounded-lg text-xs font-black transition ${
                       powerKw === String(kw) && !isCustomPower
-                        ? 'bg-emerald-700 text-white shadow-sm'
-                        : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
+                        ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
+                        : 'bg-white border border-neutral-300 text-neutral-700 hover:border-black'
                     }`}
                   >
                     {kw} kW
@@ -438,10 +450,10 @@ export const CreateListing: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsCustomPower(true)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
+                  className={`px-3 py-1 rounded-lg text-xs font-black transition ${
                     isCustomPower
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
+                      ? 'bg-yellow-400 text-black shadow-xs border border-yellow-500/30'
+                      : 'bg-white border border-neutral-300 text-neutral-700 hover:border-black'
                   }`}
                 >
                   Custom kW
@@ -458,7 +470,7 @@ export const CreateListing: React.FC = () => {
                     value={powerKw}
                     onChange={(e) => setPowerKw(e.target.value)}
                     placeholder="Enter custom kW (e.g. 24)"
-                    className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-300 font-bold text-slate-900"
+                    className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-black text-neutral-900"
                     required
                   />
                 </div>
@@ -468,11 +480,11 @@ export const CreateListing: React.FC = () => {
             {/* Connector Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Connector Gun Type</label>
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">Connector Gun Type</label>
                 <select
                   value={connectorType}
                   onChange={(e) => setConnectorType(e.target.value as ConnectorType)}
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 >
                   <option value="Type 2">Type 2 AC (Mennekes - IEC 62196)</option>
                   <option value="CCS2">CCS-2 DC Combo (Standard India EV Fast)</option>
@@ -485,13 +497,13 @@ export const CreateListing: React.FC = () => {
 
               {/* Physical Bookable Ports */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">
                   Number of Physical Charging Guns
                 </label>
                 <select
                   value={physicalPortsCount}
                   onChange={(e) => setPhysicalPortsCount(parseInt(e.target.value, 10))}
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 >
                   <option value={1}>1 Gun (Single user at a time)</option>
                   <option value={2}>2 Guns (Dual port dual car)</option>
@@ -503,35 +515,35 @@ export const CreateListing: React.FC = () => {
             {/* Manufacturer & Model */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Charger Manufacturer</label>
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">Charger Manufacturer</label>
                 <input
                   type="text"
                   value={chargerManufacturer}
                   onChange={(e) => setChargerManufacturer(e.target.value)}
                   placeholder="e.g. Exicom, Delta, ABB, Tata"
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Model / Serial</label>
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">Model / Serial</label>
                 <input
                   type="text"
                   value={chargerModel}
                   onChange={(e) => setChargerModel(e.target.value)}
                   placeholder="e.g. Terra 54 / Spin AC"
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 />
               </div>
             </div>
 
             {/* Pricing Method & Operational Toggles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-emerald-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-yellow-200">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Pricing Billing Method</label>
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">Pricing Billing Method</label>
                 <select
                   value={pricingModel}
                   onChange={(e) => setPricingModel(e.target.value as ChargingPricingModel)}
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 >
                   <option value="per_kwh">Per kWh Consumed</option>
                   <option value="per_hour">Per Hour Connected</option>
@@ -540,27 +552,27 @@ export const CreateListing: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Operating Hours</label>
+                <label className="block text-[11px] font-black text-neutral-700 mb-1">Operating Hours</label>
                 <input
                   type="text"
                   value={operatingHours}
                   onChange={(e) => setOperatingHours(e.target.value)}
                   placeholder="24/7 or 06:00 - 23:00"
-                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-slate-200 font-semibold"
+                  className="w-full text-xs p-2.5 rounded-xl bg-white border border-neutral-300 font-semibold"
                 />
               </div>
             </div>
 
             {/* Parking Included & Simultaneous Parking Toggles */}
-            <div className="space-y-2 pt-2 border-t border-emerald-100">
+            <div className="space-y-2 pt-2 border-t border-yellow-200">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isParkingIncluded}
                   onChange={(e) => setIsParkingIncluded(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded accent-black"
                 />
-                <span className="text-xs text-slate-800 font-medium select-none">
+                <span className="text-xs text-neutral-800 font-bold select-none">
                   Parking is included in the charging rate (no separate parking fee)
                 </span>
               </label>
@@ -570,9 +582,9 @@ export const CreateListing: React.FC = () => {
                   type="checkbox"
                   checked={requiresSimultaneousParking}
                   onChange={(e) => setRequiresSimultaneousParking(e.target.checked)}
-                  className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  className="rounded accent-black"
                 />
-                <span className="text-xs text-slate-800 font-medium select-none">
+                <span className="text-xs text-neutral-800 font-bold select-none">
                   Charger occupies a dedicated parking bay (automatically locks the bay to avoid double-booking)
                 </span>
               </label>
@@ -581,8 +593,8 @@ export const CreateListing: React.FC = () => {
         )}
 
         {/* Amenities Selection */}
-        <div className="space-y-2 pt-3 border-t border-slate-100">
-          <label className="block text-xs font-bold text-slate-700 uppercase">Available Amenities</label>
+        <div className="space-y-2 pt-3 border-t border-neutral-100">
+          <label className="block text-xs font-black text-neutral-700 uppercase">Available Amenities</label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { id: 'cctv', label: 'CCTV Surveillance' },
@@ -596,10 +608,10 @@ export const CreateListing: React.FC = () => {
                 type="button"
                 key={a.id}
                 onClick={() => toggleAmenity(a.id)}
-                className={`p-2.5 rounded-xl border text-xs font-semibold text-center transition ${
+                className={`p-2.5 rounded-xl border text-xs font-black text-center transition active:scale-95 ${
                   selectedAmenities.includes(a.id)
-                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-                    : 'bg-slate-50 border-slate-200 text-slate-600'
+                    ? 'bg-yellow-400 border-yellow-500 text-black shadow-xs'
+                    : 'bg-neutral-50 border-neutral-200 text-neutral-700 hover:border-black'
                 }`}
               >
                 {selectedAmenities.includes(a.id) ? '✓ ' : '+ '}{a.label}
@@ -611,10 +623,10 @@ export const CreateListing: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-3.5 px-4 rounded-2xl shadow-lg shadow-emerald-600/30 transition text-sm flex items-center justify-center gap-2"
+          className="w-full bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 text-black font-black py-4 px-4 rounded-2xl shadow-xs border border-yellow-500/20 transition active:scale-95 text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
         >
           {isSubmitting ? 'Publishing Listing...' : 'Publish Listing to VFlow Marketplace'}
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4 stroke-[2.5]" />
         </button>
       </form>
     </div>

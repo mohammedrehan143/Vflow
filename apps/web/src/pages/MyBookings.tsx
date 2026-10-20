@@ -36,16 +36,16 @@ export const MyBookings: React.FC = () => {
   const bookings = data?.bookings || [];
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-white min-h-screen text-neutral-900">
       <div>
-        <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 uppercase tracking-wider">
-          <Clock className="w-3.5 h-3.5" />
+        <div className="inline-flex items-center gap-1.5 text-xs font-black text-neutral-900 bg-yellow-400 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-xs mb-1">
+          <Clock className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Driver Dashboard</span>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+        <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 mt-1">
           My Reservations & Sessions
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+        <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 font-medium">
           View your confirmed parking spots, charging sessions, and digital PIN passes
         </p>
       </div>
@@ -53,7 +53,7 @@ export const MyBookings: React.FC = () => {
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-40 bg-slate-100 rounded-3xl animate-pulse" />
+            <div key={n} className="h-40 bg-neutral-100 rounded-3xl animate-pulse border border-neutral-200" />
           ))}
         </div>
       ) : bookings.length > 0 ? (
@@ -66,38 +66,38 @@ export const MyBookings: React.FC = () => {
             return (
               <div
                 key={booking._id}
-                className="bg-white rounded-3xl border border-slate-200 p-5 shadow-sm hover:border-slate-300 transition flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                className="bg-white rounded-3xl border-2 border-neutral-200 p-5 shadow-xs hover:border-black transition flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
               >
                 <div className="space-y-2 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-slate-500">
+                    <span className="font-mono text-xs font-black text-neutral-500">
                       #{booking.bookingNumber}
                     </span>
                     <span
-                      className={`text-[11px] font-bold uppercase px-2.5 py-0.5 rounded-full ${
+                      className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
                         isConfirmed
-                          ? 'bg-emerald-100 text-emerald-800'
+                          ? 'bg-yellow-400 text-black shadow-xs'
                           : isCompleted
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-black text-white'
                           : isCancelled
                           ? 'bg-red-100 text-red-800'
-                          : 'bg-slate-100 text-slate-700'
+                          : 'bg-neutral-100 text-neutral-700'
                       }`}
                     >
                       {booking.status}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded capitalize">
+                    <span className="text-[11px] font-bold text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded capitalize border border-neutral-200">
                       {booking.serviceType}
                     </span>
                   </div>
 
-                  <h3 className="font-bold text-slate-900 text-base">
+                  <h3 className="font-black text-neutral-900 text-base">
                     {booking.listing?.title || 'Reserved Parking Bay'}
                   </h3>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-neutral-500 font-medium">
                     <div className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <Clock className="w-3.5 h-3.5 text-neutral-400" />
                       <span>
                         {new Date(booking.startTime).toLocaleDateString('en-IN', {
                           month: 'short',
@@ -107,8 +107,8 @@ export const MyBookings: React.FC = () => {
                       </span>
                     </div>
                     {booking.vehicleDetails && (
-                      <div className="flex items-center gap-1 font-semibold text-slate-700">
-                        <Car className="w-3.5 h-3.5 text-emerald-600" />
+                      <div className="flex items-center gap-1 font-black text-neutral-900">
+                        <Car className="w-3.5 h-3.5 stroke-[2.5]" />
                         <span>{booking.vehicleDetails.licensePlate}</span>
                       </div>
                     )}
@@ -118,25 +118,25 @@ export const MyBookings: React.FC = () => {
                 {/* Right PIN and Actions */}
                 <div className="flex flex-wrap items-center gap-4 self-end md:self-center">
                   {isConfirmed && booking.accessPin && (
-                    <div className="bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-xl text-center">
-                      <div className="text-[10px] font-bold text-emerald-800 uppercase">Entry PIN</div>
-                      <div className="font-mono font-extrabold text-lg text-emerald-950">
+                    <div className="bg-yellow-50 border-2 border-yellow-300 px-4 py-2 rounded-xl text-center shadow-xs">
+                      <div className="text-[10px] font-black text-neutral-900 uppercase">Entry PIN</div>
+                      <div className="font-mono font-black text-xl text-black">
                         {booking.accessPin}
                       </div>
                     </div>
                   )}
 
                   <div className="text-right">
-                    <div className="text-base font-extrabold text-slate-900">
+                    <div className="text-base font-black text-neutral-900">
                       ₹{(booking.pricing.totalAmountPaise / 100).toFixed(2)}
                     </div>
-                    <div className="text-[11px] text-slate-400">Total Paid</div>
+                    <div className="text-[11px] text-neutral-400 font-medium">Total Paid</div>
                   </div>
 
                   {isConfirmed && (
                     <button
                       onClick={() => setCancellingBookingId(booking._id)}
-                      className="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl transition"
+                      className="text-xs font-black text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-xl transition border border-red-200"
                     >
                       Cancel
                     </button>
@@ -147,15 +147,15 @@ export const MyBookings: React.FC = () => {
           })}
         </div>
       ) : (
-        <div className="text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
-          <Car className="w-12 h-12 text-slate-300 mx-auto" />
-          <h3 className="font-bold text-slate-800">No Reservations Yet</h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+        <div className="text-center py-16 bg-white rounded-3xl border-2 border-neutral-200 p-8 space-y-3 shadow-xs">
+          <Car className="w-12 h-12 text-neutral-300 mx-auto" />
+          <h3 className="font-black text-neutral-900">No Reservations Yet</h3>
+          <p className="text-xs text-neutral-500 max-w-sm mx-auto font-medium">
             Ready to find parking or fast EV charging? Search spots in Bangalore, Mumbai, and Delhi.
           </p>
           <Link
             to="/parking"
-            className="inline-block bg-emerald-600 text-white font-semibold text-xs px-4 py-2.5 rounded-xl shadow-sm"
+            className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-black text-xs px-5 py-2.5 rounded-xl shadow-xs border border-yellow-500/20 transition active:scale-95"
           >
             Find Parking Now
           </Link>
@@ -164,22 +164,22 @@ export const MyBookings: React.FC = () => {
 
       {/* Cancellation Confirmation Modal */}
       {cancellingBookingId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center gap-2 text-red-600 font-bold text-base">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border-2 border-neutral-200 text-neutral-900">
+            <div className="flex items-center gap-2 text-red-600 font-black text-base">
               <AlertCircle className="w-5 h-5" />
               <span>Cancel Reservation</span>
             </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
+            <p className="text-xs text-neutral-600 leading-relaxed font-medium">
               Are you sure you want to cancel this booking? According to the listing policy, eligible refunds are automatically credited back to your original payment method via Razorpay.
             </p>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Reason for cancellation</label>
+              <label className="block text-xs font-black text-neutral-700 mb-1">Reason for cancellation</label>
               <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                className="w-full text-xs p-2.5 bg-neutral-50 border border-neutral-300 rounded-xl font-semibold focus:outline-none focus:border-black"
               >
                 <option value="Change of plans">Change of plans</option>
                 <option value="Booked wrong vehicle or time">Booked wrong vehicle or time</option>
@@ -190,14 +190,14 @@ export const MyBookings: React.FC = () => {
             <div className="flex gap-2 justify-end pt-2">
               <button
                 onClick={() => setCancellingBookingId(null)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                className="px-4 py-2 rounded-xl text-xs font-black text-neutral-600 hover:bg-neutral-100"
               >
                 Keep Booking
               </button>
               <button
                 onClick={() => cancelMutation.mutate(cancellingBookingId)}
                 disabled={cancelMutation.isPending}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white shadow"
+                className="px-4 py-2 rounded-xl text-xs font-black bg-black text-white hover:text-yellow-400 transition shadow-xs"
               >
                 {cancelMutation.isPending ? 'Processing Refund...' : 'Confirm Cancellation'}
               </button>

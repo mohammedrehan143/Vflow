@@ -100,13 +100,13 @@ export const InstallPromptPopup: React.FC = () => {
       role="dialog"
       aria-labelledby="pwa-install-title"
       aria-describedby="pwa-install-desc"
-      className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-20 z-50 sm:w-[400px] max-w-[calc(100vw-2rem)] bg-neutral-950/95 backdrop-blur-md rounded-2xl shadow-2xl border border-yellow-400/40 p-5 ring-1 ring-yellow-400/20 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-5 text-white"
+      className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-20 z-50 sm:w-[400px] max-w-[calc(100vw-2rem)] bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-neutral-900 p-5 ring-4 ring-yellow-400/20 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-5 text-neutral-900"
     >
       {/* Top Header with App Branding and Close Button */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
           {/* VFlow App Icon */}
-          <div className="w-12 h-12 rounded-2xl bg-yellow-400 p-0.5 shadow-md shadow-yellow-400/20 flex-shrink-0 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-yellow-400 p-0.5 shadow-md shadow-yellow-400/30 flex-shrink-0 flex items-center justify-center">
             <svg
               className="w-full h-full rounded-[14px]"
               viewBox="0 0 100 100"
@@ -135,16 +135,16 @@ export const InstallPromptPopup: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <h2
                 id="pwa-install-title"
-                className="text-base font-black text-white tracking-tight"
+                className="text-base font-black text-neutral-900 tracking-tight"
               >
                 Install VFlow
               </h2>
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider bg-yellow-400 text-black px-1.5 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wider bg-black text-yellow-400 px-1.5 py-0.5 rounded-full">
                 <Sparkles className="w-2.5 h-2.5" />
                 App
               </span>
             </div>
-            <p className="text-xs text-neutral-400 font-semibold">vflow.app</p>
+            <p className="text-xs text-neutral-500 font-semibold">vflow.app</p>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ export const InstallPromptPopup: React.FC = () => {
         <button
           onClick={handleDismiss}
           aria-label="Close install prompt"
-          className="text-neutral-400 hover:text-white p-1.5 rounded-xl hover:bg-neutral-900 transition focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="text-neutral-400 hover:text-black p-1.5 rounded-xl hover:bg-neutral-100 transition focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
           <X className="w-4 h-4" />
         </button>
@@ -161,7 +161,7 @@ export const InstallPromptPopup: React.FC = () => {
       {/* Description Text */}
       <p
         id="pwa-install-desc"
-        className="mt-3 text-xs sm:text-sm text-neutral-300 leading-relaxed"
+        className="mt-3 text-xs sm:text-sm text-neutral-600 leading-relaxed font-medium"
       >
         Get faster access to parking, EV charging, and nearby places. Install VFlow on your device for an app-like experience.
       </p>
@@ -171,7 +171,7 @@ export const InstallPromptPopup: React.FC = () => {
         <button
           onClick={handleDismiss}
           type="button"
-          className="px-3.5 py-2 text-xs font-bold text-neutral-400 hover:text-white hover:bg-neutral-900 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-neutral-700"
+          className="px-3.5 py-2 text-xs font-bold text-neutral-600 hover:text-black hover:bg-neutral-100 rounded-xl transition focus:outline-none focus:ring-2 focus:ring-neutral-700"
         >
           Not Now
         </button>
@@ -180,9 +180,9 @@ export const InstallPromptPopup: React.FC = () => {
           onClick={handleInstallClick}
           type="button"
           disabled={isInstalling}
-          className="inline-flex items-center justify-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-yellow-400/20 transition active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          className="inline-flex items-center justify-center gap-1.5 bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-4 py-2 rounded-xl shadow-md border border-yellow-500/30 transition active:scale-95 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-yellow-400"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>{isInstalling ? 'Installing...' : 'Install App'}</span>
         </button>
       </div>

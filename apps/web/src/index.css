@@ -8,29 +8,44 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-slate-50 text-slate-900;
+    @apply bg-white text-neutral-900 antialiased;
   }
 }
 
-/* Custom leaflet map adjustments */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  border-radius: 0.75rem;
-  z-index: 10;
+/* MapLibre GL JS Styles & Modern Zepto Enhancements */
+.maplibregl-map {
   font-family: inherit;
 }
 
-.leaflet-popup-content-wrapper {
-  border-radius: 0.75rem;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  padding: 0;
-  overflow: hidden;
+.maplibregl-canvas {
+  outline: none;
 }
 
-.leaflet-popup-content {
-  margin: 0;
-  line-height: 1.4;
+.maplibregl-ctrl-attrib {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 10px !important;
+  border-top-left-radius: 8px;
+  padding: 2px 6px !important;
+}
+
+/* Custom Marker Pulse and Animation */
+@keyframes map-marker-pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 12px rgba(250, 204, 21, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+  }
+}
+
+.marker-selected-pulse {
+  animation: map-marker-pulse 2s infinite ease-in-out;
 }
 
 /* Custom badge glow */

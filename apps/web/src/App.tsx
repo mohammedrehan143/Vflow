@@ -35,10 +35,10 @@ import {
 
 export const App: React.FC = () => {
   return (
-    <div className="flex flex-col min-h-screen bg-black text-white selection:bg-yellow-400 selection:text-black pb-16">
+    <div className="flex flex-col min-h-screen bg-white text-neutral-900 selection:bg-yellow-400 selection:text-black pb-16">
       <Navbar />
 
-      <main className="flex-1">
+      <main className="flex-1 bg-white">
         <Routes>
           {/* Public Marketplace */}
           <Route path="/" element={<Home />} />
@@ -87,12 +87,12 @@ export const App: React.FC = () => {
             path="*"
             element={
               <div className="max-w-md mx-auto px-4 py-24 text-center space-y-4">
-                <div className="text-4xl font-black text-slate-300">404</div>
-                <h2 className="text-xl font-bold text-slate-900">Page Not Found</h2>
-                <p className="text-xs text-slate-500">The destination or route you requested could not be located.</p>
+                <div className="text-4xl font-black text-neutral-300">404</div>
+                <h2 className="text-xl font-black text-neutral-900">Page Not Found</h2>
+                <p className="text-xs text-neutral-500">The destination or route you requested could not be located.</p>
                 <a
                   href="/"
-                  className="inline-block bg-emerald-600 text-white text-xs font-semibold px-4 py-2 rounded-xl"
+                  className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black text-xs font-black px-5 py-2.5 rounded-xl shadow-sm transition active:scale-95"
                 >
                   Return to Home
                 </a>

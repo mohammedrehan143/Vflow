@@ -8,7 +8,11 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password?: string, remember?: boolean) => Promise<any>;
+  login: (
+    emailOrParams: string | { identifier?: string; email?: string; password?: string; remember?: boolean },
+    password?: string,
+    remember?: boolean
+  ) => Promise<any>;
   register: (userData: any) => Promise<any>;
   logout: () => void;
   selectRole: (role: 'customer' | 'provider') => Promise<void>;
@@ -58,12 +62,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password: string = 'VFlow@123', remember: boolean = true) => {
+  const login = async (
+    emailOrParams: string | { identifier?: string; email?: string; password?: string; remember?: boolean },
+    password?: string,
+    remember: boolean = true
+  ) => {
     setIsLoading(true);
+    let resolvedEmail = '';
+    let resolvedPassword = password || 'VFlow@123';
+    let resolvedRemember = remember;
+
+    if (typeof emailOrParams === 'object' && emailOrParams !== null) {
+      resolvedEmail = emailOrParams.identifier || emailOrParams.email || '';
+      if (emailOrParams.password) resolvedPassword = emailOrParams.password;
+      if (emailOrParams.remember !== undefined) resolvedRemember = emailOrParams.remember;
+    } else {
+      resolvedEmail = emailOrParams;
+    }
+
     try {
-      const res = await api.auth.login({ email, password });
+      const res = await api.auth.login({ email: resolvedEmail, password: resolvedPassword });
       if (res.success && res.token) {
-        if (remember) {
+        if (resolvedRemember) {
           localStorage.setItem('vflow_token', res.token);
         } else {
           sessionStorage.setItem('vflow_token', res.token);
@@ -93,46 +113,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const selectRole = async (targetRole: 'customer' | 'provider') => {
-    setIsLoading(true);
-    try {
-      const res = await api.auth.selectRole(targetRole);
-      if (res.success && res.user) {
-        setUser(res.user);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = () => {
-    try {
-      api.auth.logout();
-    } catch (e) {
-      // ignore
-    }
     localStorage.removeItem('vflow_token');
     sessionStorage.removeItem('vflow_token');
     setToken(null);
     setUser(null);
   };
 
-  const quickDemoLogin = async (targetRole: 'customer' | 'provider' | 'admin') => {
-    const roleEmails = {
-      customer: 'driver@vflow.in',
-      provider: 'provider@vflow.in',
-      admin: 'admin@vflow.in',
-    };
-    await login(roleEmails[targetRole], 'VFlow@123');
+  const selectRole = async (newRole: 'customer' | 'provider') => {
+    if (!token) throw new Error('Not authenticated');
+    const res = await api.auth.selectRole(newRole);
+    if (res.success && res.user) {
+      setUser(res.user);
+    }
   };
+
+  // Instant 1-Click Demo Login bypass
+  const quickDemoLogin = async (targetRole: 'customer' | 'provider' | 'admin') => {
+    const email =
+      targetRole === 'customer'
+        ? 'customer@vflow.in'
+        : targetRole === 'provider'
+        ? 'provider@vflow.in'
+        : 'admin@vflow.in';
+    await login(email, 'VFlow@123', true);
+  };
+
+  const role = user?.role || null;
+  const isAuthenticated = !!token && !!user;
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        role: user?.role || null,
+        role,
         token,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         login,
         register,

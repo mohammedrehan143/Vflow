@@ -42,29 +42,29 @@ export const FindParking: React.FC = () => {
   const listings = data?.listings || [];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 bg-white min-h-screen">
       {/* Title & View Toggle Header */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-neutral-200">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 uppercase tracking-wider">
-            <Car className="w-4 h-4" />
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-yellow-400 text-black text-xs font-black uppercase tracking-wider shadow-xs mb-1">
+            <Car className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Airbnb for Parking</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 mt-1">
             Reserve Parking Spaces in {city}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-neutral-500 mt-0.5 font-medium">
             {listings.length} verified parking spots available with digital access
           </p>
         </div>
 
         {/* View Mode & Filter Toggles */}
         <div className="flex items-center gap-2">
-          <div className="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+          <div className="bg-neutral-100 p-1 rounded-xl flex items-center gap-1 border border-neutral-200">
             <button
               onClick={() => setViewMode('split')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                viewMode === 'split' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`p-2 rounded-lg text-xs font-black flex items-center gap-1.5 transition ${
+                viewMode === 'split' ? 'bg-black text-yellow-400 shadow-xs' : 'text-neutral-600 hover:text-black'
               }`}
             >
               <MapIcon className="w-3.5 h-3.5" />
@@ -72,8 +72,8 @@ export const FindParking: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
-                viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              className={`p-2 rounded-lg text-xs font-black flex items-center gap-1.5 transition ${
+                viewMode === 'grid' ? 'bg-black text-yellow-400 shadow-xs' : 'text-neutral-600 hover:text-black'
               }`}
             >
               <Grid className="w-3.5 h-3.5" />
@@ -84,14 +84,14 @@ export const FindParking: React.FC = () => {
       </div>
 
       {/* Filter Controls Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center gap-3">
+      <div className="bg-white p-4 rounded-2xl border-2 border-neutral-200 shadow-xs flex flex-wrap items-center gap-3">
         {/* City Filter */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold">
-          <span className="text-slate-500">City:</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 rounded-xl border border-neutral-300 text-xs font-bold text-neutral-900">
+          <span className="text-neutral-500 font-semibold">City:</span>
           <select
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            className="bg-transparent text-slate-900 focus:outline-none cursor-pointer"
+            className="bg-transparent text-neutral-900 font-black focus:outline-none cursor-pointer"
           >
             <option value="Bangalore">Bangalore</option>
             <option value="Mumbai">Mumbai</option>
@@ -102,9 +102,9 @@ export const FindParking: React.FC = () => {
         </div>
 
         {/* Max Hourly Rate Filter */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
-          <span className="text-slate-500 font-semibold">Max Rate:</span>
-          <span className="font-bold text-slate-900">₹{maxPrice}/hr</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 rounded-xl border border-neutral-300 text-xs">
+          <span className="text-neutral-500 font-semibold">Max Rate:</span>
+          <span className="font-black text-neutral-900">₹{maxPrice}/hr</span>
           <input
             type="range"
             min="30"
@@ -112,33 +112,33 @@ export const FindParking: React.FC = () => {
             step="10"
             value={maxPrice}
             onChange={(e) => setMaxPrice(Number(e.target.value))}
-            className="w-24 accent-emerald-600 cursor-pointer"
+            className="w-24 accent-black cursor-pointer"
           />
         </div>
 
         {/* Covered Toggle */}
         <button
           onClick={() => setIsCovered(!isCovered)}
-          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-xl border text-xs font-black transition flex items-center gap-1.5 active:scale-95 ${
             isCovered
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              ? 'bg-yellow-400 border-yellow-500 text-black shadow-xs'
+              : 'bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50'
           }`}
         >
-          <CheckCircle2 className={`w-3.5 h-3.5 ${isCovered ? 'text-emerald-600' : 'text-slate-400'}`} />
+          <CheckCircle2 className={`w-3.5 h-3.5 ${isCovered ? 'text-black stroke-[2.5]' : 'text-neutral-400'}`} />
           <span>Covered Parking Only</span>
         </button>
 
         {/* Instant Booking Toggle */}
         <button
           onClick={() => setInstantOnly(!instantOnly)}
-          className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-xl border text-xs font-black transition flex items-center gap-1.5 active:scale-95 ${
             instantOnly
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+              ? 'bg-yellow-400 border-yellow-500 text-black shadow-xs'
+              : 'bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50'
           }`}
         >
-          <CheckCircle2 className={`w-3.5 h-3.5 ${instantOnly ? 'text-emerald-600' : 'text-slate-400'}`} />
+          <CheckCircle2 className={`w-3.5 h-3.5 ${instantOnly ? 'text-black stroke-[2.5]' : 'text-neutral-400'}`} />
           <span>Instant Bookable</span>
         </button>
 
@@ -149,7 +149,7 @@ export const FindParking: React.FC = () => {
               setInstantOnly(false);
               setMaxPrice(200);
             }}
-            className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 ml-auto"
+            className="text-xs text-neutral-500 hover:text-black font-black flex items-center gap-1 ml-auto"
           >
             <X className="w-3.5 h-3.5" />
             <span>Reset Filters</span>
@@ -165,7 +165,7 @@ export const FindParking: React.FC = () => {
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="h-64 rounded-2xl bg-slate-100 animate-pulse" />
+                  <div key={n} className="h-64 rounded-2xl bg-neutral-100 animate-pulse border border-neutral-200" />
                 ))}
               </div>
             ) : listings.length > 0 ? (
@@ -175,10 +175,10 @@ export const FindParking: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-                <Car className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-                <h3 className="font-bold text-slate-800">No parking spaces found</h3>
-                <p className="text-xs text-slate-500 mt-1">Try relaxing your price or feature filters.</p>
+              <div className="text-center py-16 bg-white rounded-2xl border-2 border-neutral-200 p-8 shadow-xs">
+                <Car className="w-12 h-12 text-neutral-300 mx-auto mb-2" />
+                <h3 className="font-black text-neutral-900">No parking spaces found</h3>
+                <p className="text-xs text-neutral-500 mt-1 font-medium">Try relaxing your price or feature filters.</p>
               </div>
             )}
           </div>
@@ -198,7 +198,7 @@ export const FindParking: React.FC = () => {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((n) => (
-                <div key={n} className="h-72 rounded-2xl bg-slate-100 animate-pulse" />
+                <div key={n} className="h-72 rounded-2xl bg-neutral-100 animate-pulse border border-neutral-200" />
               ))}
             </div>
           ) : listings.length > 0 ? (
@@ -208,10 +208,10 @@ export const FindParking: React.FC = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 p-8">
-              <Car className="w-12 h-12 text-slate-300 mx-auto mb-2" />
-              <h3 className="font-bold text-slate-800">No parking spaces found</h3>
-              <p className="text-xs text-slate-500 mt-1">Try relaxing your price or feature filters.</p>
+            <div className="text-center py-16 bg-white rounded-2xl border-2 border-neutral-200 p-8 shadow-xs">
+              <Car className="w-12 h-12 text-neutral-300 mx-auto mb-2" />
+              <h3 className="font-black text-neutral-900">No parking spaces found</h3>
+              <p className="text-xs text-neutral-500 mt-1 font-medium">Try relaxing your price or feature filters.</p>
             </div>
           )}
         </div>
